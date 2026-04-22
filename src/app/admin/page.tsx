@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { readCatalog } from "@/lib/catalog";
 import { LoginForm } from "./LoginForm";
 import { AdminDashboard } from "./AdminDashboard";
+import { Logo } from "@/components/Logo";
 
 export const dynamic = "force-dynamic";
 
@@ -11,12 +12,17 @@ export default async function AdminPage() {
 
   if (!isAuthed) {
     return (
-      <div className="mx-auto w-full max-w-md px-4 py-20 sm:px-6">
-        <h1 className="text-2xl font-bold text-neutral-900">Admin</h1>
-        <p className="mt-2 text-sm text-neutral-600">
-          Ingresá la contraseña para gestionar el catálogo.
+      <div className="mx-auto flex min-h-[calc(100dvh-64px)] w-full max-w-md flex-col justify-center px-5 py-16">
+        <Logo className="h-10 w-10 text-ink" strokeWidth={7} />
+        <h1 className="mt-8 font-display text-5xl leading-none tracking-[-0.02em]">
+          Panel
+          <br />
+          <span className="font-display-italic text-moss">privado.</span>
+        </h1>
+        <p className="mt-4 font-mono text-[11px] uppercase tracking-[0.22em] text-ink/55">
+          Ingresá la contraseña para continuar.
         </p>
-        <div className="mt-8">
+        <div className="mt-10">
           <LoginForm />
         </div>
       </div>
@@ -25,7 +31,7 @@ export default async function AdminPage() {
 
   const catalog = await readCatalog();
   return (
-    <div className="mx-auto w-full max-w-4xl px-4 py-10 sm:px-6">
+    <div className="mx-auto w-full max-w-5xl px-5 py-10 md:px-8 md:py-16">
       <AdminDashboard initial={catalog} />
     </div>
   );

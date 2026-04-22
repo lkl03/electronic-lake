@@ -1,12 +1,27 @@
 import type { Metadata } from "next";
-import { Inter, Montserrat } from "next/font/google";
+import {
+  Fraunces,
+  Instrument_Sans,
+  JetBrains_Mono,
+  Montserrat,
+} from "next/font/google";
 import "./globals.css";
-import { Header } from "@/components/Header";
-import { Footer } from "@/components/Footer";
-import { CartDrawer } from "@/components/CartDrawer";
 
-const inter = Inter({
-  variable: "--font-inter",
+const fraunces = Fraunces({
+  variable: "--font-fraunces",
+  subsets: ["latin"],
+  display: "swap",
+  axes: ["opsz", "SOFT", "WONK"],
+});
+
+const instrument = Instrument_Sans({
+  variable: "--font-instrument",
+  subsets: ["latin"],
+  display: "swap",
+});
+
+const jetbrains = JetBrains_Mono({
+  variable: "--font-jetbrains",
   subsets: ["latin"],
   display: "swap",
 });
@@ -18,14 +33,14 @@ const montserrat = Montserrat({
 });
 
 export const metadata: Metadata = {
-  title: "Electronic Lake — Celulares",
+  title: "Electronic Lake — Celulares importados",
   description:
-    "Celulares importados con garantía. Catálogo actualizado y atención personalizada por WhatsApp.",
+    "Catálogo editorial de celulares con garantía y atención humana. Coordinación por WhatsApp.",
   icons: { icon: "/favicon.ico" },
   openGraph: {
-    title: "Electronic Lake — Celulares",
+    title: "Electronic Lake — Celulares importados",
     description:
-      "Celulares importados con garantía. Catálogo actualizado y atención personalizada por WhatsApp.",
+      "Catálogo editorial de celulares con garantía y atención humana.",
     type: "website",
   },
 };
@@ -38,13 +53,10 @@ export default function RootLayout({
   return (
     <html
       lang="es-AR"
-      className={`${inter.variable} ${montserrat.variable} h-full antialiased`}
+      className={`${fraunces.variable} ${instrument.variable} ${jetbrains.variable} ${montserrat.variable}`}
     >
-      <body className="flex min-h-full flex-col bg-white text-neutral-900">
-        <Header />
-        <main className="flex-1">{children}</main>
-        <Footer />
-        <CartDrawer />
+      <body className="min-h-dvh bg-paper text-ink antialiased">
+        {children}
       </body>
     </html>
   );

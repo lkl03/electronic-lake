@@ -3,65 +3,94 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { Phone } from "@/lib/types";
-import { formatArs } from "@/lib/whatsapp";
 import { useCart } from "@/lib/cart";
+import { Logo } from "./Logo";
 
-export function ProductCard({ phone }: { phone: Phone }) {
+function formatPesos(n: number): string {
+  return new Intl.NumberFormat("es-AR", { maximumFractionDigits: 0 }).format(n);
+}
+
+export function ProductCard({
+  phone,
+  index,
+}: {
+  phone: Phone;
+  index: number;
+}) {
   const add = useCart((s) => s.add);
-  const image = phone.images[0];
-  const title = [phone.brand, phone.model, phone.variant]
-    .filter(Boolean)
-    .join(" ");
+  const num = String(index + 1).padStart(2, "0");
+  const title = [phone.brand, phone.model].filter(Boolean).join(" ");
+
   return (
-    <article className="group relative flex flex-col overflow-hidden rounded-2xl border border-neutral-200 bg-white transition-shadow hover:shadow-lg">
+    <article className="group relative flex flex-col border-b border-ink/15 md:border-r md:[&:nth-child(2n)]:border-r-0 lg:[&:nth-child(2n)]:border-r lg:[&:nth-child(3n)]:border-r-0">
       <Link
         href={`/producto/${phone.slug}`}
-        className="relative aspect-square overflow-hidden bg-neutral-50"
+        className="relative block aspect-[4/5] overflow-hidden bg-mist/30"
         aria-label={`Ver ${title}`}
       >
-        {image ? (
-          <Image
-            src={image}
-            alt={title}
-            fill
-            sizes="(min-width:1024px) 25vw, (min-width:640px) 50vw, 100vw"
-            className="object-contain p-6 transition-transform duration-500 group-hover:scale-105"
-          />
-        ) : (
-          <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[#96ca51]/10 to-neutral-100 text-4xl text-neutral-300">
-            📱
-          </div>
-        )}
+        <span className="absolute left-5 top-5 z-10 font-mono text-[10px] uppercase tracking-[0.25em] text-ink/40">
+          № {num}
+        </span>
         {phone.condition && phone.condition !== "nuevo" && (
-          <span className="absolute left-3 top-3 rounded-full bg-neutral-900/90 px-2.5 py-1 text-xs font-medium text-white">
+          <span className="absolute right-5 top-5 z-10 bg-ink px-2 py-1 font-mono text-[9px] uppercase tracking-[0.22em] text-paper">
             {phone.condition}
           </span>
         )}
+        {phone.images[0] ? (
+          <Image
+            src={phone.images[0]}
+            alt={title}
+            fill
+            sizes="(min-width:1024px) 33vw, (min-width:768px) 50vw, 100vw"
+            className="object-contain p-12 transition-transform duration-[900ms] ease-[cubic-bezier(0.2,0.7,0.15,1)] group-hover:scale-[1.04]"
+          />
+        ) : (
+          <div className="flex h-full items-center justify-center">
+            <Logo className="h-24 w-24 text-moss/40" />
+          </div>
+        )}
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-ink/10 transition-all duration-500 group-hover:bg-moss" />
       </Link>
-      <div className="flex flex-1 flex-col gap-3 p-5">
-        <div>
-          <p className="text-xs uppercase tracking-wider text-neutral-500">
-            {phone.brand}
-          </p>
-          <h3 className="mt-1 line-clamp-2 text-base font-semibold text-neutral-900">
-            {phone.model}
-            {phone.variant ? ` ${phone.variant}` : ""}
-          </h3>
-          {phone.storage && (
-            <p className="mt-1 text-sm text-neutral-600">{phone.storage}</p>
-          )}
+      <div className="flex flex-1 flex-col px-6 py-7 md:px-8">
+        <div className="font-mono text-[10px] uppercase tracking-[0.25em] text-ink/50">
+          {phone.brand}
         </div>
-        <div className="mt-auto flex items-center justify-between gap-2">
-          <p className="text-lg font-bold text-neutral-900">
-            {formatArs(phone.priceArs)}
-          </p>
-          <button
-            onClick={() => add(phone)}
-            aria-label={`Agregar ${title} al carrito`}
-            className="rounded-full bg-[#96ca51] px-4 py-2 text-xs font-semibold text-neutral-900 transition-colors hover:bg-[#8abf40] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-900"
-          >
-            Agregar
-          </button>
+        <h3 className="mt-1 font-display text-[28px] leading-[1.05] tracking-[-0.015em]">
+          {phone.model}
+          {phone.variant && (
+            <>
+              {" "}
+              <span className="font-display-italic text-ink/80">
+                {phone.variant}
+              </span>
+            </>
+          )}
+        </h3>
+        <div className="mt-3 font-mono text-[10px] uppercase tracking-[0.2em] text-ink/55">
+          {[phone.storage, phone.color].filter(Boolean).join(" · ") || " "}
+        </div>
+
+        <div className="mt-auto flex items-end justify-between gap-4 pt-8">
+          <div>
+            <div className="font-mono text-[9px] uppercase tracking-[0.25em] text-ink/45">
+              ARS
+            </div>
+            <div className="mt-1 font-display text-[26px] leading-none tracking-[-0.02em]">
+              ${formatPesos(phone.priceArs)}
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                add(phone);
+              }}
+              aria-label={`Agregar ${title}`}
+              className="rounded-full border border-ink bg-ink px-4 py-2 font-mono text-[10px] uppercase tracking-[0.22em] text-paper transition-colors hover:bg-moss hover:text-ink"
+            >
+              Agregar
+            </button>
+          </div>
         </div>
       </div>
     </article>
