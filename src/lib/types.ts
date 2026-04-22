@@ -19,6 +19,7 @@ export type Phone = {
   color?: string;
   condition?: "nuevo" | "usado" | "seminuevo";
   usd: number;
+  marginUsd: number;
   priceArs: number;
   images: string[];
   specs: PhoneSpecs;

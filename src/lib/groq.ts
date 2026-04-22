@@ -126,7 +126,12 @@ export async function enrichSpecs(
 export function buildPhone(
   extracted: ExtractedPhone,
   dollarRate: number,
-  extras: { specs: PhoneSpecs; highlights: string[]; images: string[] }
+  extras: {
+    specs: PhoneSpecs;
+    highlights: string[];
+    images: string[];
+    marginUsd?: number;
+  }
 ): Phone {
   const slugParts = [
     extracted.brand,
@@ -136,6 +141,7 @@ export function buildPhone(
   ]
     .filter(Boolean)
     .join(" ");
+  const marginUsd = Math.max(0, extras.marginUsd ?? 0);
   return {
     slug: slugify(slugParts),
     brand: extracted.brand,
@@ -145,7 +151,8 @@ export function buildPhone(
     color: extracted.color,
     condition: extracted.condition ?? "nuevo",
     usd: extracted.usd,
-    priceArs: Math.round(extracted.usd * dollarRate),
+    marginUsd,
+    priceArs: Math.round((extracted.usd + marginUsd) * dollarRate),
     images: extras.images,
     specs: extras.specs,
     highlights: extras.highlights,

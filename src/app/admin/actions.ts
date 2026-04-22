@@ -64,6 +64,12 @@ export async function generateCatalog(
       };
     }
 
+    const previous = await readCatalog();
+    const prevMargins = new Map<string, number>();
+    for (const p of previous.phones) {
+      prevMargins.set(p.slug, p.marginUsd ?? 0);
+    }
+
     const warnings: string[] = [];
     const phones: Phone[] = await Promise.all(
       extracted.map(async (e) => {
@@ -74,11 +80,17 @@ export async function generateCatalog(
         if (!imgRes) {
           warnings.push(`Sin imagen automática: ${e.brand} ${e.model}`);
         }
-        return buildPhone(e, dollarRate, {
+        const draft = buildPhone(e, dollarRate, {
           specs: specsRes.specs,
           highlights: specsRes.highlights,
           images: imgRes ? [imgRes] : [],
         });
+        const carriedMargin = prevMargins.get(draft.slug) ?? 0;
+        return {
+          ...draft,
+          marginUsd: carriedMargin,
+          priceArs: Math.round((draft.usd + carriedMargin) * dollarRate),
+        };
       })
     );
 
@@ -101,8 +113,9 @@ export async function generateCatalog(
   }
 }
 
-export async function updateDollarRate(
-  dollarRate: number
+export async function updatePricing(
+  dollarRate: number,
+  marginsBySlug: Record<string, number>
 ): Promise<ActionResult> {
   try {
     await requireAuth();
@@ -113,10 +126,18 @@ export async function updateDollarRate(
     if (current.phones.length === 0) {
       return { ok: false, error: "No hay catálogo para recalcular." };
     }
-    const phones = current.phones.map((p) => ({
-      ...p,
-      priceArs: Math.round(p.usd * dollarRate),
-    }));
+    const phones = current.phones.map((p) => {
+      const rawMargin = marginsBySlug[p.slug];
+      const marginUsd = Math.max(
+        0,
+        Number.isFinite(rawMargin) ? Number(rawMargin) : p.marginUsd ?? 0
+      );
+      return {
+        ...p,
+        marginUsd,
+        priceArs: Math.round((p.usd + marginUsd) * dollarRate),
+      };
+    });
     const next: Catalog = {
       ...current,
       dollarRate,

@@ -25,7 +25,7 @@ export default async function HomePage() {
           </h1>
 
           <p
-            className="rise max-w-2xl font-mono text-[11px] uppercase tracking-[0.28em] text-paper/70 sm:text-xs"
+            className="rise max-w-2xl text-balance font-mono text-[11px] uppercase tracking-[0.28em] text-paper/70 sm:text-xs"
             style={{ animationDelay: "180ms" }}
           >
             Teléfonos importados · Nuevos y en caja sellada
