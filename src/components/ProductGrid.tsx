@@ -7,7 +7,7 @@ export function ProductGrid({ phones }: { phones: Phone[] }) {
     return (
       <div className="border-t border-ink/15">
         <div className="mx-auto flex max-w-2xl flex-col items-center px-6 py-28 text-center">
-          <Logo className="h-14 w-14 text-moss/70" strokeWidth={7} />
+          <Logo width={120} height={120} className="h-20 w-auto opacity-70" />
           <p className="mt-8 font-display text-4xl italic leading-tight text-ink/80 md:text-5xl">
             Catálogo próximamente.
           </p>

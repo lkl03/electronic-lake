@@ -1,6 +1,7 @@
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { CartDrawer } from "@/components/CartDrawer";
+import { WhatsAppFloating } from "@/components/WhatsAppFloating";
 
 export default function StoreLayout({
   children,
@@ -13,6 +14,7 @@ export default function StoreLayout({
       <main className="flex-1">{children}</main>
       <Footer />
       <CartDrawer />
+      <WhatsAppFloating />
     </div>
   );
 }

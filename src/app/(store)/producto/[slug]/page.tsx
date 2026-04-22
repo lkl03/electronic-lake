@@ -83,7 +83,7 @@ export default async function ProductPage({
               />
             ) : (
               <div className="flex h-full items-center justify-center">
-                <Logo className="h-32 w-32 text-moss/50" />
+                <Logo width={200} height={200} className="h-32 w-auto opacity-50" />
               </div>
             )}
           </div>
