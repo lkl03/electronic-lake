@@ -1,12 +1,99 @@
-import { Logo } from "./Logo";
+import { TribalMark } from "./TribalMark";
 
 export function Footer() {
   const year = new Date().getFullYear();
+  const whatsapp =
+    process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? "5491138184414";
+  const instagram =
+    process.env.NEXT_PUBLIC_INSTAGRAM_URL ??
+    "https://www.instagram.com/electronic_lake/";
+  const facebook =
+    process.env.NEXT_PUBLIC_FACEBOOK_URL ??
+    "https://www.facebook.com/electroniclake";
+
+  const marks = Array.from({ length: 14 });
 
   return (
     <footer className="relative mt-24 border-t border-ink/15 bg-ink text-paper grain">
-      <div className="relative z-10 mx-auto flex max-w-[1440px] items-center justify-center px-5 py-16 md:px-10 md:py-20">
-        <Logo width={260} height={100} className="h-20 w-auto md:h-24" />
+      {/* Alternating tribal marks marquee */}
+      <div
+        className="overflow-hidden border-b border-paper/10 py-6"
+        aria-hidden
+      >
+        <div className="marquee-track flex w-max items-center gap-10 whitespace-nowrap">
+          {marks.map((_, i) => (
+            <TribalMark
+              key={i}
+              className={`h-10 w-10 shrink-0 ${
+                i % 2 === 0 ? "text-moss" : "text-paper"
+              }`}
+              strokeWidth={7}
+            />
+          ))}
+          {marks.map((_, i) => (
+            <TribalMark
+              key={`b-${i}`}
+              className={`h-10 w-10 shrink-0 ${
+                i % 2 === 0 ? "text-moss" : "text-paper"
+              }`}
+              strokeWidth={7}
+            />
+          ))}
+        </div>
+      </div>
+
+      <div className="relative z-10 mx-auto flex max-w-[1440px] flex-col items-start gap-10 px-5 py-16 md:flex-row md:items-end md:justify-between md:px-10 md:py-20">
+        <div className="flex flex-col gap-6">
+          <span className="font-mono text-[10px] uppercase tracking-[0.28em] text-paper/50">
+            Contacto
+          </span>
+          <ul className="flex flex-col gap-3 font-display text-3xl leading-none tracking-[-0.015em] md:flex-row md:flex-wrap md:gap-8 md:text-4xl">
+            <li>
+              <a
+                href={`https://wa.me/${whatsapp}?text=${encodeURIComponent(
+                  "Hola! Me contacto a través de su web."
+                )}`}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-baseline gap-2 link-pull hover:text-moss"
+              >
+                WhatsApp
+                <span className="font-mono text-[10px] uppercase tracking-[0.25em] text-paper/40">
+                  ↗
+                </span>
+              </a>
+            </li>
+            <li>
+              <a
+                href={instagram}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-baseline gap-2 link-pull hover:text-moss"
+              >
+                Instagram
+                <span className="font-mono text-[10px] uppercase tracking-[0.25em] text-paper/40">
+                  ↗
+                </span>
+              </a>
+            </li>
+            <li>
+              <a
+                href={facebook}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-baseline gap-2 link-pull hover:text-moss"
+              >
+                Facebook
+                <span className="font-mono text-[10px] uppercase tracking-[0.25em] text-paper/40">
+                  ↗
+                </span>
+              </a>
+            </li>
+          </ul>
+        </div>
+        <div className="font-mono text-[10px] uppercase tracking-[0.25em] text-paper/50">
+          Electronic Lake · Buenos Aires · AR
+        </div>
       </div>
 
       <div className="relative z-10 bg-[#212121]">

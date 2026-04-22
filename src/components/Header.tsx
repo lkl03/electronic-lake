@@ -3,26 +3,30 @@
 import Link from "next/link";
 import { Logo } from "./Logo";
 import { CartButton } from "./CartButton";
+import { HeaderMarquee } from "./HeaderMarquee";
 
 export function Header() {
   return (
-    <header className="relative z-30 border-b border-ink/15 bg-paper">
-      <div className="mx-auto flex w-full max-w-[1440px] items-center justify-between gap-4 px-5 py-4 md:px-10">
-        <Link
-          href="/"
-          className="flex items-center"
-          aria-label="Electronic Lake — inicio"
-        >
-          <Logo
-            width={180}
-            height={60}
-            priority
-            className="h-11 w-auto md:h-12"
-          />
-        </Link>
+    <div className="sticky top-0 z-40">
+      <header className="border-b border-ink/15 bg-paper/95 backdrop-blur-md supports-[backdrop-filter]:bg-paper/80">
+        <div className="mx-auto flex w-full max-w-[1440px] items-center justify-between gap-4 px-5 py-3 md:px-10 md:py-4">
+          <Link
+            href="/"
+            className="flex items-center"
+            aria-label="Electronic Lake — inicio"
+          >
+            <Logo
+              width={260}
+              height={90}
+              priority
+              className="h-16 w-auto md:h-20"
+            />
+          </Link>
 
-        <CartButton />
-      </div>
-    </header>
+          <CartButton />
+        </div>
+      </header>
+      <HeaderMarquee />
+    </div>
   );
 }

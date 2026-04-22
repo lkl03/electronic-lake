@@ -1,6 +1,7 @@
 import { readCatalog } from "@/lib/catalog";
 import { ProductGrid } from "@/components/ProductGrid";
 import { InfoMarquee } from "@/components/InfoMarquee";
+import { HeroParticles } from "@/components/HeroParticles";
 
 export const revalidate = 60;
 
@@ -14,12 +15,29 @@ export default async function HomePage() {
     <>
       {/* HERO ——————————————————————————————————————— */}
       <section className="relative overflow-hidden bg-ink text-paper grain">
-        <div className="relative z-10 mx-auto flex min-h-[72vh] max-w-[1440px] flex-col items-center justify-center gap-10 px-5 py-20 text-center md:min-h-[80vh] md:px-10 md:py-28">
-          <HeroArt />
+        {/* Soft radial halo */}
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(150,202,81,0.18),transparent_65%)]" />
+        <HeroParticles />
+
+        <div className="relative z-10 mx-auto flex min-h-[78vh] max-w-[1440px] flex-col items-center justify-center gap-10 px-5 py-24 text-center md:min-h-[86vh] md:px-10 md:py-32">
+          <h1 className="rise font-display text-[clamp(3.5rem,13vw,11rem)] font-light leading-[0.88] tracking-[-0.04em] text-paper">
+            electronic{" "}
+            <span className="font-display-italic text-moss">lake</span>
+          </h1>
+
+          <p
+            className="rise max-w-2xl font-mono text-[11px] uppercase tracking-[0.28em] text-paper/70 sm:text-xs"
+            style={{ animationDelay: "180ms" }}
+          >
+            Teléfonos importados · Nuevos y en caja sellada
+            <span className="mx-3 text-moss">|</span>
+            Envíos en el día
+          </p>
 
           <a
             href="#catalogo"
-            className="group inline-flex items-center gap-3 rounded-full bg-moss px-8 py-4 font-mono text-[11px] uppercase tracking-[0.28em] text-ink shadow-[0_12px_40px_-8px_rgba(150,202,81,0.5)] transition-all hover:scale-[1.03] hover:bg-paper"
+            className="rise group inline-flex items-center gap-3 rounded-full bg-moss px-8 py-4 font-mono text-[11px] uppercase tracking-[0.28em] text-ink shadow-[0_12px_40px_-8px_rgba(150,202,81,0.5)] transition-all hover:scale-[1.03] hover:bg-paper"
+            style={{ animationDelay: "360ms" }}
           >
             Ver catálogo
             <span className="transition-transform group-hover:translate-x-1">
@@ -27,6 +45,9 @@ export default async function HomePage() {
             </span>
           </a>
         </div>
+
+        {/* soft bottom fade for continuity into catalog */}
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-b from-transparent to-ink" />
       </section>
 
       {/* INFO MARQUEE ————————————————————————————————— */}
@@ -102,119 +123,5 @@ export default async function HomePage() {
         </div>
       </section>
     </>
-  );
-}
-
-function HeroArt() {
-  return (
-    <div
-      aria-hidden
-      className="relative flex h-[320px] w-[320px] items-center justify-center sm:h-[420px] sm:w-[420px] md:h-[520px] md:w-[520px]"
-    >
-      {/* soft green halo */}
-      <div className="absolute inset-0 rounded-full bg-[radial-gradient(circle_at_center,rgba(150,202,81,0.28),transparent_62%)] breathe" />
-
-      {/* outer rotating ring */}
-      <svg
-        viewBox="0 0 400 400"
-        className="orbit-slow absolute inset-0 h-full w-full text-moss"
-        fill="none"
-        stroke="currentColor"
-      >
-        <circle
-          cx="200"
-          cy="200"
-          r="190"
-          strokeWidth="1"
-          strokeDasharray="2 9"
-          opacity="0.45"
-        />
-        <circle cx="200" cy="10" r="3" fill="currentColor" />
-        <circle cx="200" cy="390" r="2" fill="currentColor" opacity="0.55" />
-      </svg>
-
-      {/* mid reverse ring */}
-      <svg
-        viewBox="0 0 400 400"
-        className="orbit-reverse absolute inset-0 h-full w-full text-moss/70"
-        fill="none"
-        stroke="currentColor"
-      >
-        <circle
-          cx="200"
-          cy="200"
-          r="150"
-          strokeWidth="1"
-          strokeDasharray="1 14"
-          opacity="0.6"
-        />
-        <circle cx="350" cy="200" r="4" fill="currentColor" />
-        <circle cx="60" cy="200" r="2.5" fill="currentColor" opacity="0.6" />
-      </svg>
-
-      {/* central phone silhouette */}
-      <div className="drift relative z-10">
-        <svg
-          viewBox="0 0 160 240"
-          className="h-[180px] w-auto text-moss drop-shadow-[0_12px_40px_rgba(150,202,81,0.35)] sm:h-[220px] md:h-[280px]"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="3"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <defs>
-            <linearGradient id="screen" x1="0" x2="0" y1="0" y2="1">
-              <stop offset="0%" stopColor="#96ca51" stopOpacity="0.25" />
-              <stop offset="100%" stopColor="#1a3a1f" stopOpacity="0.85" />
-            </linearGradient>
-          </defs>
-          <rect
-            x="15"
-            y="10"
-            width="130"
-            height="220"
-            rx="22"
-            ry="22"
-            fill="url(#screen)"
-          />
-          <rect
-            x="15"
-            y="10"
-            width="130"
-            height="220"
-            rx="22"
-            ry="22"
-          />
-          <line x1="55" y1="24" x2="105" y2="24" strokeWidth="2" opacity="0.6" />
-          <circle cx="80" cy="215" r="4" fill="currentColor" />
-          {/* inner signal waves */}
-          <path
-            d="M55 120 Q80 95 105 120"
-            strokeWidth="2"
-            opacity="0.75"
-            className="breathe"
-          />
-          <path
-            d="M45 135 Q80 85 115 135"
-            strokeWidth="1.5"
-            opacity="0.5"
-          />
-          <path
-            d="M35 150 Q80 75 125 150"
-            strokeWidth="1"
-            opacity="0.3"
-          />
-        </svg>
-      </div>
-
-      {/* orbiting dots */}
-      <div className="orbit-slow absolute inset-0">
-        <span className="absolute left-1/2 top-0 block h-3 w-3 -translate-x-1/2 rounded-full bg-moss shadow-[0_0_20px_rgba(150,202,81,0.9)]" />
-      </div>
-      <div className="orbit-reverse absolute inset-6">
-        <span className="absolute right-0 top-1/2 block h-2 w-2 -translate-y-1/2 rounded-full bg-paper/80" />
-      </div>
-    </div>
   );
 }
