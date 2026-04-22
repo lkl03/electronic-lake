@@ -21,8 +21,7 @@ export default async function HomePage() {
 
         <div className="relative z-10 mx-auto flex min-h-[78vh] max-w-[1440px] flex-col items-center justify-center gap-10 px-5 py-24 text-center md:min-h-[86vh] md:px-10 md:py-32">
           <h1 className="rise font-display text-[clamp(3.5rem,13vw,11rem)] font-light leading-[0.88] tracking-[-0.04em] text-paper">
-            electronic{" "}
-            <span className="font-display-italic text-moss">lake</span>
+            electronic <span className="text-moss">lake</span>
           </h1>
 
           <p

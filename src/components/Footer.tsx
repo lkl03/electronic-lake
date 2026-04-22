@@ -9,40 +9,12 @@ export function Footer() {
     "https://www.instagram.com/electronic_lake/";
   const facebook =
     process.env.NEXT_PUBLIC_FACEBOOK_URL ??
-    "https://www.facebook.com/electroniclake";
-
-  const marks = Array.from({ length: 14 });
+    "https://www.facebook.com/ELECTRONICLAKE18";
 
   return (
     <footer className="relative mt-24 border-t border-ink/15 bg-ink text-paper grain">
-      {/* Alternating tribal marks marquee */}
-      <div
-        className="overflow-hidden border-b border-paper/10 py-6"
-        aria-hidden
-      >
-        <div className="marquee-track flex w-max items-center gap-10 whitespace-nowrap">
-          {marks.map((_, i) => (
-            <TribalMark
-              key={i}
-              className={`h-10 w-10 shrink-0 ${
-                i % 2 === 0 ? "text-moss" : "text-paper"
-              }`}
-              strokeWidth={7}
-            />
-          ))}
-          {marks.map((_, i) => (
-            <TribalMark
-              key={`b-${i}`}
-              className={`h-10 w-10 shrink-0 ${
-                i % 2 === 0 ? "text-moss" : "text-paper"
-              }`}
-              strokeWidth={7}
-            />
-          ))}
-        </div>
-      </div>
-
-      <div className="relative z-10 mx-auto flex max-w-[1440px] flex-col items-start gap-10 px-5 py-16 md:flex-row md:items-end md:justify-between md:px-10 md:py-20">
+      <div className="relative z-10 mx-auto flex max-w-[1440px] flex-col items-start gap-12 px-5 py-16 md:flex-row md:items-center md:justify-between md:gap-16 md:px-10 md:py-24">
+        {/* Contact block */}
         <div className="flex flex-col gap-6">
           <span className="font-mono text-[10px] uppercase tracking-[0.28em] text-paper/50">
             Contacto
@@ -90,9 +62,24 @@ export function Footer() {
               </a>
             </li>
           </ul>
+          <div className="font-mono text-[10px] uppercase tracking-[0.25em] text-paper/45">
+            Electronic Lake · Buenos Aires · AR
+          </div>
         </div>
-        <div className="font-mono text-[10px] uppercase tracking-[0.25em] text-paper/50">
-          Electronic Lake · Buenos Aires · AR
+
+        {/* Overlapping rotating tribal marks */}
+        <div
+          className="relative h-40 w-40 shrink-0 self-center sm:h-52 sm:w-52 md:h-64 md:w-64 lg:h-72 lg:w-72"
+          aria-hidden
+        >
+          <TribalMark
+            className="orbit-slow absolute inset-0 h-full w-full text-paper"
+            strokeWidth={6}
+          />
+          <TribalMark
+            className="orbit-reverse absolute inset-0 h-full w-full text-moss"
+            strokeWidth={6}
+          />
         </div>
       </div>
 

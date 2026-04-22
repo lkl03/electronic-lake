@@ -16,7 +16,7 @@ type Particle = {
   opacity: number;
 };
 
-const COUNT = 70;
+const COUNT = 160;
 
 function buildParticles(): Particle[] {
   return Array.from({ length: COUNT }, (_, i) => {
@@ -24,13 +24,13 @@ function buildParticles(): Particle[] {
     return {
       left: r(1) * 100,
       top: r(2) * 100,
-      size: 1 + r(3) * 5,
-      duration: 10 + r(4) * 18,
+      size: 1 + r(3) * 6,
+      duration: 5 + r(4) * 14,
       delay: -r(5) * 20,
-      driftX: (r(6) - 0.5) * 180,
-      driftY: (r(7) - 0.5) * 180,
-      green: r(8) > 0.45,
-      opacity: 0.25 + r(9) * 0.65,
+      driftX: (r(6) - 0.5) * 420,
+      driftY: (r(7) - 0.5) * 380,
+      green: r(8) > 0.4,
+      opacity: 0.25 + r(9) * 0.75,
     };
   });
 }

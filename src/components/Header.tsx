@@ -16,10 +16,10 @@ export function Header() {
             aria-label="Electronic Lake — inicio"
           >
             <Logo
-              width={260}
-              height={90}
+              width={380}
+              height={130}
               priority
-              className="h-16 w-auto md:h-20"
+              className="h-24 w-auto md:h-28"
             />
           </Link>
 

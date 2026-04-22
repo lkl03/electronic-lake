@@ -61,12 +61,7 @@ export const metadata: Metadata = {
   publisher: "Electronic Lake",
   alternates: { canonical: "/" },
   icons: {
-    icon: [
-      { url: "/logo.png", type: "image/png" },
-      { url: "/favicon.ico", sizes: "any" },
-    ],
     apple: "/logo.png",
-    shortcut: "/logo.png",
   },
   openGraph: {
     type: "website",
