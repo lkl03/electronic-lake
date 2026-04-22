@@ -1,36 +1,71 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Electronic Lake
 
-## Getting Started
+Landing + tienda de celulares para [@electronic_lake](https://www.instagram.com/electronic_lake/). Catálogo generado automáticamente desde un mensaje del importador usando Groq (LLaMA 3.3 70B), con checkout por WhatsApp.
 
-First, run the development server:
+## Stack
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- **Next.js 16** (App Router, Turbopack, React 19)
+- **Tailwind CSS v4**
+- **TypeScript**
+- **Zustand** (carrito con persistencia en localStorage)
+- **Groq SDK** (extracción de modelos + specs)
+- **@vercel/blob** (storage del catálogo)
+- **Wikipedia REST API** (imágenes de modelos, cacheadas 30 días)
+
+## Estructura
+
+```
+src/
+  app/
+    page.tsx                 ← landing + grid
+    producto/[slug]/page.tsx ← detalle de producto
+    admin/                   ← panel de admin protegido
+    layout.tsx               ← header, footer, cart drawer
+  components/
+  lib/
+    cart.ts                  ← store zustand
+    catalog.ts               ← read/write a Vercel Blob
+    groq.ts                  ← extracción + enriquecimiento con LLaMA
+    images.ts                ← resolución de imágenes vía Wikipedia
+    whatsapp.ts
+    types.ts
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Variables de entorno
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Copiá `.env.local.example` a `.env.local` y completá:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```
+GROQ_API_KEY=gsk_...
+ADMIN_PASSWORD=...
+NEXT_PUBLIC_WHATSAPP_NUMBER=5491138184414
+NEXT_PUBLIC_INSTAGRAM_URL=https://www.instagram.com/electronic_lake/
+BLOB_READ_WRITE_TOKEN=vercel_blob_rw_...
+```
 
-## Learn More
+Para obtener `BLOB_READ_WRITE_TOKEN`: en el proyecto de Vercel → **Storage** → **Create Store** → **Blob** → conectar al proyecto (el token se inyecta automáticamente en todos los entornos).
 
-To learn more about Next.js, take a look at the following resources:
+## Desarrollo
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+npm install
+npm run dev
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Admin
 
-## Deploy on Vercel
+- Ruta: `/admin`
+- Contraseña: `ADMIN_PASSWORD`
+- Flujo:
+  1. Pegar el listado del importador (precios en USD)
+  2. Ingresar el valor del dólar (ARS)
+  3. **Generar catálogo** → Groq extrae modelos, genera specs + highlights, Wikipedia resuelve imágenes, se guarda en Blob
+  4. Para ajustar solo el tipo de cambio usar **Solo actualizar dólar**
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Checkout
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+El carrito persiste en localStorage. El botón **Finalizar por WhatsApp** abre `wa.me/<numero>` con el detalle de los productos y el total en ARS.
+
+---
+
+Diseñado y desarrollado por [eterlab](https://eterlab.co/).
