@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 500">
+  <!-- Background -->
+  <rect width="400" height="500" fill="#111111"/>
+
+  <!-- Subtle vignette -->
+  <radialGradient id="vg" cx="50%" cy="45%" r="65%">
+    <stop offset="0%" stop-color="#1d2538" stop-opacity="0.9"/>
+    <stop offset="100%" stop-color="#0a0a0a" stop-opacity="1"/>
+  </radialGradient>
+  <rect width="400" height="500" fill="url(#vg)"/>
+
+  <!-- Phone body -->
+  <rect x="92" y="52" width="216" height="396" rx="40" fill="none" stroke="#4a4a4a" stroke-width="2.5"/>
+  <!-- Titanium inner edge -->
+  <rect x="99" y="59" width="202" height="382" rx="34" fill="#161618"/>
+
+  <!-- Dynamic Island -->
+  <rect x="154" y="79" width="92" height="28" rx="14" fill="#000"/>
+  <!-- Front camera in island -->
+  <circle cx="224" cy="93" r="5.5" fill="#0f0f0f" stroke="#1a1a1a" stroke-width="1"/>
+  <circle cx="224" cy="93" r="2.5" fill="#1a2a3a" opacity="0.8"/>
+
+  <!-- Screen glow -->
+  <radialGradient id="sg" cx="50%" cy="40%" r="50%">
+    <stop offset="0%" stop-color="#1e3a5f" stop-opacity="0.4"/>
+    <stop offset="100%" stop-color="#0a0a14" stop-opacity="0.0"/>
+  </radialGradient>
+  <rect x="101" y="61" width="198" height="378" rx="32" fill="url(#sg)"/>
+
+  <!-- Apple logo mark (simplified trefoil) -->
+  <g transform="translate(200,205)" opacity="0.85">
+    <!-- Apple shape: circle + bite -->
+    <path d="M0-32 C12-32 24-22 24-10 C24 6 14 18 0 26 C-14 18 -24 6 -24-10 C-24-22 -12-32 0-32Z" fill="#e8e8ed"/>
+    <!-- Bite -->
+    <circle cx="14" cy="-26" r="11" fill="#161618"/>
+    <!-- Leaf -->
+    <path d="M-4-32 C-4-40 4-44 10-40" fill="none" stroke="#e8e8ed" stroke-width="3.5" stroke-linecap="round"/>
+  </g>
+
+  <!-- Home indicator -->
+  <rect x="155" y="418" width="90" height="4" rx="2" fill="#2c2c2e"/>
+
+  <!-- Side button (right) -->
+  <rect x="307" y="148" width="5" height="52" rx="2.5" fill="#3a3a3c"/>
+  <!-- Volume buttons (left) -->
+  <rect x="88" y="138" width="5" height="32" rx="2.5" fill="#3a3a3c"/>
+  <rect x="88" y="180" width="5" height="48" rx="2.5" fill="#3a3a3c"/>
+  <!-- Mute (left) -->
+  <rect x="88" y="116" width="5" height="16" rx="2.5" fill="#3a3a3c"/>
+
+  <!-- Brand text -->
+  <text x="200" y="315" text-anchor="middle"
+    font-family="'Helvetica Neue', Helvetica, Arial, sans-serif"
+    font-size="13" font-weight="300" letter-spacing="6"
+    fill="#8e8e93">iPHONE</text>
+</svg>

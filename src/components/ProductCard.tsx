@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import type { Phone } from "@/lib/types";
 import { useCart } from "@/lib/cart";
-import { Logo } from "./Logo";
+import { getBrandPlaceholder } from "@/lib/placeholders";
 
 function formatPesos(n: number): string {
   return new Intl.NumberFormat("es-AR", { maximumFractionDigits: 0 }).format(n);
@@ -36,19 +36,13 @@ export function ProductCard({
             {phone.condition}
           </span>
         )}
-        {phone.images[0] ? (
-          <Image
-            src={phone.images[0]}
-            alt={title}
-            fill
-            sizes="(min-width:1024px) 33vw, (min-width:768px) 50vw, 100vw"
-            className="object-contain p-12 transition-transform duration-[900ms] ease-[cubic-bezier(0.2,0.7,0.15,1)] group-hover:scale-[1.04]"
-          />
-        ) : (
-          <div className="flex h-full items-center justify-center">
-            <Logo className="h-24 w-24 text-moss/40" />
-          </div>
-        )}
+        <Image
+          src={phone.images[0] || getBrandPlaceholder(phone.brand)}
+          alt={title}
+          fill
+          sizes="(min-width:1024px) 33vw, (min-width:768px) 50vw, 100vw"
+          className="object-contain p-10 transition-transform duration-[900ms] ease-[cubic-bezier(0.2,0.7,0.15,1)] group-hover:scale-[1.04]"
+        />
         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-ink/10 transition-all duration-500 group-hover:bg-moss" />
       </Link>
       <div className="flex flex-1 flex-col px-6 py-7 md:px-8">

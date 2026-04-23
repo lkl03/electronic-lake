@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 500">
+  <rect width="400" height="500" fill="#0b0e0a"/>
+  <radialGradient id="dg" cx="50%" cy="45%" r="55%">
+    <stop offset="0%" stop-color="#96ca51" stop-opacity="0.08"/>
+    <stop offset="100%" stop-color="#0b0e0a" stop-opacity="0"/>
+  </radialGradient>
+  <rect width="400" height="500" fill="url(#dg)"/>
+
+  <rect x="90" y="50" width="220" height="400" rx="42" fill="none" stroke="#222" stroke-width="2"/>
+  <rect x="95" y="55" width="210" height="390" rx="37" fill="#111"/>
+
+  <!-- Front camera -->
+  <circle cx="200" cy="83" r="7" fill="#0a0a0a"/>
+  <circle cx="200" cy="83" r="4" fill="#0f1a0a" opacity="0.8"/>
+
+  <!-- Minimal moss accent ring -->
+  <circle cx="200" cy="250" r="45" fill="none" stroke="#96ca51" stroke-width="1" opacity="0.25"/>
+  <circle cx="200" cy="250" r="30" fill="none" stroke="#96ca51" stroke-width="1" opacity="0.15"/>
+
+  <!-- Phone silhouette icon -->
+  <g transform="translate(200,250)" fill="none" stroke="#96ca51" stroke-width="2" stroke-linecap="round" opacity="0.5">
+    <rect x="-14" y="-22" width="28" height="44" rx="5"/>
+    <line x1="-4" y1="-18" x2="4" y2="-18"/>
+    <circle cx="0" cy="16" r="2.5" fill="#96ca51"/>
+  </g>
+
+  <rect x="155" y="416" width="90" height="4" rx="2" fill="#1e1e1e"/>
+  <rect x="309" y="150" width="5" height="55" rx="2.5" fill="#1a1a1a"/>
+  <rect x="86" y="155" width="5" height="72" rx="2.5" fill="#1a1a1a"/>
+</svg>

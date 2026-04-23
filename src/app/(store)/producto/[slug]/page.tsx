@@ -8,7 +8,7 @@ import {
   formatArs,
 } from "@/lib/whatsapp";
 import { AddToCartButton } from "@/components/AddToCartButton";
-import { Logo } from "@/components/Logo";
+import { getBrandPlaceholder } from "@/lib/placeholders";
 import type { PhoneSpecs } from "@/lib/types";
 
 export const revalidate = 60;
@@ -72,20 +72,14 @@ export default async function ProductPage({
             <span className="absolute left-6 top-6 z-10 font-mono text-[10px] uppercase tracking-[0.25em] text-ink/40">
               {phone.brand}
             </span>
-            {phone.images[0] ? (
-              <Image
-                src={phone.images[0]}
-                alt={title}
-                fill
-                sizes="(min-width:1024px) 60vw, 100vw"
-                className="object-contain p-16"
-                priority
-              />
-            ) : (
-              <div className="flex h-full items-center justify-center">
-                <Logo width={200} height={200} className="h-32 w-auto opacity-50" />
-              </div>
-            )}
+            <Image
+              src={phone.images[0] || getBrandPlaceholder(phone.brand)}
+              alt={title}
+              fill
+              sizes="(min-width:1024px) 60vw, 100vw"
+              className="object-contain p-12"
+              priority
+            />
           </div>
           {phone.images.length > 1 && (
             <div className="mt-4 grid grid-cols-4 gap-3">
