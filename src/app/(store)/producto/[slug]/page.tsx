@@ -142,15 +142,26 @@ export default async function ProductPage({
           </div>
 
           <div className="mt-10 border-y border-ink/15 py-6">
-            <div className="font-mono text-[10px] uppercase tracking-[0.25em] text-ink/50">
-              Precio en pesos
+            <div className="flex flex-wrap items-baseline gap-x-8 gap-y-3">
+              <div>
+                <div className="font-mono text-[10px] uppercase tracking-[0.25em] text-ink/50">
+                  Precio ARS
+                </div>
+                <div className="mt-1 font-display text-[clamp(2.5rem,5vw,4rem)] leading-none tracking-[-0.02em]">
+                  {formatArs(phone.priceArs)}
+                </div>
+              </div>
+              <div>
+                <div className="font-mono text-[10px] uppercase tracking-[0.25em] text-ink/50">
+                  Precio USD
+                </div>
+                <div className="mt-1 font-display text-[clamp(1.75rem,3vw,2.75rem)] leading-none tracking-[-0.02em] text-moss">
+                  USD {phone.usd + (phone.marginUsd ?? 0)}
+                </div>
+              </div>
             </div>
-            <div className="mt-2 font-display text-[clamp(2.5rem,5vw,4rem)] leading-none tracking-[-0.02em]">
-              {formatArs(phone.priceArs)}
-            </div>
-            <div className="mt-2 font-mono text-[11px] uppercase tracking-[0.2em] text-ink/50">
-              USD {phone.usd} · dólar ref. $
-              {catalog.dollarRate.toLocaleString("es-AR")}
+            <div className="mt-3 font-mono text-[10px] uppercase tracking-[0.2em] text-ink/45">
+              Dólar ref. ${catalog.dollarRate.toLocaleString("es-AR")}
             </div>
           </div>
 

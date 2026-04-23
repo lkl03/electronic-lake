@@ -1,4 +1,5 @@
 import { head, put, list } from "@vercel/blob";
+import { unstable_cache } from "next/cache";
 import type { Catalog } from "./types";
 
 const BLOB_PATH = "catalog.json";
@@ -13,7 +14,7 @@ function hasBlobToken(): boolean {
   return Boolean(process.env.BLOB_READ_WRITE_TOKEN);
 }
 
-export async function readCatalog(): Promise<Catalog> {
+async function _readCatalog(): Promise<Catalog> {
   if (!hasBlobToken()) return EMPTY;
   try {
     const blobs = await list({ prefix: BLOB_PATH, limit: 1 });
@@ -21,7 +22,7 @@ export async function readCatalog(): Promise<Catalog> {
     if (!entry) return EMPTY;
     const meta = await head(entry.url);
     const res = await fetch(meta.downloadUrl ?? entry.url, {
-      cache: "no-store",
+      next: { revalidate: 60 },
     });
     if (!res.ok) return EMPTY;
     const data = (await res.json()) as Catalog;
@@ -31,6 +32,11 @@ export async function readCatalog(): Promise<Catalog> {
     return EMPTY;
   }
 }
+
+export const readCatalog = unstable_cache(_readCatalog, ["catalog-v1"], {
+  revalidate: 60,
+  tags: ["catalog"],
+});
 
 export async function writeCatalog(catalog: Catalog): Promise<void> {
   if (!hasBlobToken()) {

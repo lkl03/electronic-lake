@@ -73,9 +73,19 @@ export default async function HomePage() {
                 modelo{phones.length === 1 ? "" : "s"}
               </div>
               {hasCatalog && (
-                <div className="mt-1 font-mono text-[10px] uppercase tracking-[0.22em] text-ink/40">
-                  Dólar ref. ${catalog.dollarRate.toLocaleString("es-AR")}
-                </div>
+                <>
+                  <div className="mt-1 font-mono text-[10px] uppercase tracking-[0.22em] text-ink/40">
+                    Dólar ref. ${catalog.dollarRate.toLocaleString("es-AR")}
+                  </div>
+                  <div className="mt-1 font-mono text-[10px] uppercase tracking-[0.22em] text-ink/30">
+                    Actualizado{" "}
+                    {new Date(catalog.updatedAt).toLocaleDateString("es-AR", {
+                      day: "numeric",
+                      month: "short",
+                      year: "numeric",
+                    })}
+                  </div>
+                </>
               )}
             </div>
           </div>

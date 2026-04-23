@@ -1,7 +1,7 @@
 "use server";
 
 import { cookies } from "next/headers";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { readCatalog, writeCatalog } from "@/lib/catalog";
 import {
   buildPhone,
@@ -14,6 +14,32 @@ import type { Catalog, Phone } from "@/lib/types";
 export type ActionResult =
   | { ok: true; catalog: Catalog; warnings?: string[] }
   | { ok: false; error: string };
+
+export type DollarResult =
+  | { ok: true; rate: number }
+  | { ok: false; error: string };
+
+export async function fetchDollarBlue(): Promise<DollarResult> {
+  try {
+    const res = await fetch("https://dolarapi.com/v1/dolares/blue", {
+      cache: "no-store",
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = (await res.json()) as { venta?: number; compra?: number };
+    const venta = data.venta;
+    if (!venta || typeof venta !== "number") {
+      throw new Error("Respuesta inesperada de la API");
+    }
+    return { ok: true, rate: Math.round(venta + 20) };
+  } catch (err) {
+    console.error("fetchDollarBlue", err);
+    return {
+      ok: false,
+      error:
+        err instanceof Error ? err.message : "No se pudo obtener el dólar blue.",
+    };
+  }
+}
 
 export async function login(password: string): Promise<{ ok: boolean }> {
   const expected = process.env.ADMIN_PASSWORD;
@@ -101,6 +127,7 @@ export async function generateCatalog(
       phones,
     };
     await writeCatalog(catalog);
+    revalidateTag("catalog", "max");
     revalidatePath("/");
     revalidatePath("/producto/[slug]", "page");
     return { ok: true, catalog, warnings };
@@ -145,6 +172,7 @@ export async function updatePricing(
       phones,
     };
     await writeCatalog(next);
+    revalidateTag("catalog", "max");
     revalidatePath("/");
     revalidatePath("/producto/[slug]", "page");
     return { ok: true, catalog: next };

@@ -72,11 +72,11 @@ export function ProductCard({
 
         <div className="mt-auto flex items-end justify-between gap-4 pt-8">
           <div>
-            <div className="font-mono text-[9px] uppercase tracking-[0.25em] text-ink/45">
-              ARS
-            </div>
-            <div className="mt-1 font-display text-[26px] leading-none tracking-[-0.02em]">
+            <div className="font-display text-[26px] leading-none tracking-[-0.02em]">
               ${formatPesos(phone.priceArs)}
+            </div>
+            <div className="mt-1.5 font-mono text-[10px] uppercase tracking-[0.2em] text-ink/50">
+              USD {(phone.usd + (phone.marginUsd ?? 0))}
             </div>
           </div>
           <div className="flex items-center gap-3">

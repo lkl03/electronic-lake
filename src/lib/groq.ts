@@ -37,18 +37,21 @@ Extract every phone listed into a clean JSON array. NEVER invent items that aren
 Return ONLY JSON, no prose, with this exact shape:
 {"phones": [{
   "brand": "iPhone|Samsung|Xiaomi|Motorola|...",
-  "model": "e.g. 15 Pro Max, Galaxy S24 Ultra, Redmi Note 13",
-  "variant": "optional extra like 5G, Plus, Ultra",
-  "storage": "e.g. 128GB, 256GB, 1TB",
+  "model": "e.g. Redmi Note 15, Galaxy S26 Ultra, 16 Pro Max",
+  "variant": "optional suffix like 5G, Plus, Ultra, Pro, Pro Max — only if NOT already in model",
+  "storage": "EXACTLY as written in the source, e.g. '8+256GB', '12+512GB', '16+1TB', '128GB'",
   "color": "optional",
   "condition": "nuevo|usado|seminuevo (default nuevo if unclear)",
   "usd": 999
 }]}
 Rules:
-- usd must be a number (the US dollar price from the list).
+- usd must be a number (the US dollar price from the list). U$, USD, u$s all mean US dollars.
 - If the price is in ARS/pesos, skip the item.
-- Preserve the storage separately (don't merge into model).
-- Brand should be canonical (iPhone for Apple phones; Samsung; Xiaomi; etc).
+- storage: copy the full RAM+ROM string verbatim from the source (e.g. '8+256GB'). If only storage is given (e.g. '256GB'), use that.
+- model: include the base model name. Do NOT include storage or RAM in the model field.
+- variant: include connectivity/generation suffixes like '5G', and tier suffixes like 'Pro', 'Ultra', 'Air' ONLY if not already in model.
+- Brand must be canonical: 'iPhone' for Apple; 'Samsung'; 'Xiaomi' for Xiaomi/Redmi/Poco/Mi; 'Motorola'; etc.
+- Each distinct storage/RAM configuration is a SEPARATE entry.
 - Do not add phones you only know about from training; only use what's in the message.`;
 
 const SPECS_SYSTEM = `You are a mobile phone specs expert. Given a phone brand, model, variant and storage, return a JSON object with concise, accurate technical specs in Spanish (Argentine) and a list of 3-5 short highlights.

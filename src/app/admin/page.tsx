@@ -13,7 +13,7 @@ export default async function AdminPage() {
   if (!isAuthed) {
     return (
       <div className="mx-auto flex min-h-[calc(100dvh-64px)] w-full max-w-md flex-col justify-center px-5 py-16">
-        <Logo width={160} height={56} className="h-12 w-auto" />
+        <Logo width={200} height={200} className="h-16 w-16 object-contain" />
         <h1 className="mt-8 font-display text-5xl leading-none tracking-[-0.02em]">
           Panel
           <br />
