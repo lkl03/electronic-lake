@@ -1,32 +1,13 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 500">
-  <rect width="400" height="500" fill="#0e0e0e"/>
-  <radialGradient id="mg" cx="50%" cy="45%" r="50%">
-    <stop offset="0%" stop-color="#3d0099" stop-opacity="0.2"/>
-    <stop offset="100%" stop-color="#0e0e0e" stop-opacity="0"/>
-  </radialGradient>
-  <rect width="400" height="500" fill="url(#mg)"/>
-
-  <rect x="90" y="50" width="220" height="400" rx="42" fill="none" stroke="#252525" stroke-width="2"/>
-  <rect x="95" y="55" width="210" height="390" rx="37" fill="#111"/>
-
-  <!-- Round camera module top-center -->
-  <circle cx="200" cy="90" r="28" fill="#0a0a0a" stroke="#1e1e1e" stroke-width="1.5"/>
-  <circle cx="200" cy="90" r="18" fill="#0d0d0d" stroke="#222" stroke-width="1"/>
-  <circle cx="200" cy="90" r="10" fill="#0f0f1a" opacity="0.9"/>
-  <circle cx="195" cy="85" r="3" fill="#1e1e3a" opacity="0.7"/>
-
-  <!-- Motorola batwing "M" mark -->
-  <g transform="translate(200,255)" opacity="0.75">
-    <path d="M-28 16 C-28-8 -16-24 0-24 C16-24 28-8 28 16" fill="none" stroke="#6500cc" stroke-width="6" stroke-linecap="round"/>
-    <path d="M-16 16 C-16 4 -8-4 0-4 C8-4 16 4 16 16" fill="none" stroke="#6500cc" stroke-width="6" stroke-linecap="round"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none">
+  <rect width="200" height="200" fill="#edeae0"/>
+  <!-- Motorola batwing M in circle -->
+  <g transform="translate(100,100)" opacity="0.8">
+    <circle cx="0" cy="0" r="52" fill="#0b0e0a"/>
+    <!-- Outer arc (top batwing) -->
+    <path d="M -32 18 C -32 -14 -18 -32 0 -32 C 18 -32 32 -14 32 18"
+      stroke="white" stroke-width="8.5" stroke-linecap="round" fill="none"/>
+    <!-- Inner arch (bottom valley) -->
+    <path d="M -18 18 C -18 4 -9 -4 0 -4 C 9 -4 18 4 18 18"
+      stroke="white" stroke-width="8.5" stroke-linecap="round" fill="none"/>
   </g>
-
-  <rect x="155" y="416" width="90" height="4" rx="2" fill="#222"/>
-  <rect x="309" y="150" width="5" height="55" rx="2.5" fill="#1a1a1a"/>
-  <rect x="86" y="155" width="5" height="72" rx="2.5" fill="#1a1a1a"/>
-
-  <text x="200" y="340" text-anchor="middle"
-    font-family="'Arial', sans-serif"
-    font-size="11" font-weight="300" letter-spacing="5"
-    fill="#333">MOTOROLA</text>
 </svg>

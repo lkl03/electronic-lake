@@ -184,3 +184,53 @@ export async function updatePricing(
     };
   }
 }
+
+// ─── CRUD ──────────────────────────────────────────────────────────────────
+
+export async function deletePhone(slug: string): Promise<ActionResult> {
+  try {
+    await requireAuth();
+    const current = await readCatalog();
+    const phones = current.phones.filter((p) => p.slug !== slug);
+    const next: Catalog = { ...current, phones, updatedAt: new Date().toISOString() };
+    await writeCatalog(next);
+    revalidateTag("catalog", "max");
+    revalidatePath("/");
+    revalidatePath("/producto/[slug]", "page");
+    return { ok: true, catalog: next };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Error inesperado" };
+  }
+}
+
+export async function updatePhone(
+  slug: string,
+  patch: Partial<Pick<Phone, "brand" | "model" | "variant" | "storage" | "color" | "condition" | "usd" | "marginUsd" | "images" | "highlights">>
+): Promise<ActionResult> {
+  try {
+    await requireAuth();
+    const current = await readCatalog();
+    const idx = current.phones.findIndex((p) => p.slug === slug);
+    if (idx === -1) return { ok: false, error: "Modelo no encontrado." };
+    const phone = current.phones[idx];
+    const usd = patch.usd ?? phone.usd;
+    const marginUsd = patch.marginUsd ?? phone.marginUsd ?? 0;
+    const updated: Phone = {
+      ...phone,
+      ...patch,
+      usd,
+      marginUsd,
+      priceArs: Math.round((usd + marginUsd) * current.dollarRate),
+    };
+    const phones = [...current.phones];
+    phones[idx] = updated;
+    const next: Catalog = { ...current, phones, updatedAt: new Date().toISOString() };
+    await writeCatalog(next);
+    revalidateTag("catalog", "max");
+    revalidatePath("/");
+    revalidatePath(`/producto/${slug}`, "page");
+    return { ok: true, catalog: next };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Error inesperado" };
+  }
+}

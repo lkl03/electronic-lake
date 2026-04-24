@@ -1,5 +1,5 @@
 import { readCatalog } from "@/lib/catalog";
-import { ProductGrid } from "@/components/ProductGrid";
+import { CatalogSection } from "@/components/CatalogSection";
 import { InfoMarquee } from "@/components/InfoMarquee";
 import { HeroParticles } from "@/components/HeroParticles";
 
@@ -91,7 +91,7 @@ export default async function HomePage() {
           </div>
         </div>
 
-        <ProductGrid phones={phones} />
+        <CatalogSection phones={phones} />
       </section>
 
       {/* CONTACT ——————————————————————————————————————— */}
