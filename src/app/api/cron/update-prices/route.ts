@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { revalidatePath, revalidateTag } from "next/cache";
-import { readCatalog, writeCatalog } from "@/lib/catalog";
+import { readCatalogFresh, writeCatalog } from "@/lib/catalog";
 
 export const dynamic = "force-dynamic";
 
@@ -45,8 +45,8 @@ export async function POST(req: Request) {
     // Same formula as the admin panel: venta + $20 buffer
     const dollarRate = Math.round(venta + 20);
 
-    // 2. Read current catalog
-    const current = await readCatalog();
+    // 2. Read current catalog (always fresh — bypass ISR cache)
+    const current = await readCatalogFresh();
     if (current.phones.length === 0) {
       return NextResponse.json({
         ok: true,

@@ -14,7 +14,7 @@ function hasBlobToken(): boolean {
   return Boolean(process.env.BLOB_READ_WRITE_TOKEN);
 }
 
-async function _readCatalog(): Promise<Catalog> {
+async function fetchFromBlob(): Promise<Catalog> {
   if (!hasBlobToken()) return EMPTY;
   try {
     const blobs = await list({ prefix: BLOB_PATH, limit: 1 });
@@ -22,21 +22,32 @@ async function _readCatalog(): Promise<Catalog> {
     if (!entry) return EMPTY;
     const meta = await head(entry.url);
     const res = await fetch(meta.downloadUrl ?? entry.url, {
-      next: { revalidate: 60 },
+      cache: "no-store",
     });
     if (!res.ok) return EMPTY;
-    const data = (await res.json()) as Catalog;
-    return data;
+    return (await res.json()) as Catalog;
   } catch (err) {
-    console.error("readCatalog error", err);
+    console.error("catalog fetch error", err);
     return EMPTY;
   }
 }
 
-export const readCatalog = unstable_cache(_readCatalog, ["catalog-v1"], {
+/**
+ * Cached read — used by ISR pages (revalidates every 60 s, tagged "catalog").
+ * Do NOT use inside Server Actions — use readCatalogFresh() instead.
+ */
+export const readCatalog = unstable_cache(fetchFromBlob, ["catalog-v1"], {
   revalidate: 60,
   tags: ["catalog"],
 });
+
+/**
+ * Always-fresh read — bypasses unstable_cache entirely.
+ * Use in every Server Action so stale cache doesn't cause false errors.
+ */
+export async function readCatalogFresh(): Promise<Catalog> {
+  return fetchFromBlob();
+}
 
 export async function writeCatalog(catalog: Catalog): Promise<void> {
   if (!hasBlobToken()) {

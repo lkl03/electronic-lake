@@ -2,7 +2,7 @@
 
 import { cookies } from "next/headers";
 import { revalidatePath, revalidateTag } from "next/cache";
-import { readCatalog, writeCatalog } from "@/lib/catalog";
+import { readCatalogFresh, writeCatalog } from "@/lib/catalog";
 import {
   buildPhone,
   enrichSpecs,
@@ -68,6 +68,12 @@ async function requireAuth() {
   }
 }
 
+function invalidateCatalogCache() {
+  revalidateTag("catalog", "max");
+  revalidatePath("/");
+  revalidatePath("/producto/[slug]", "page");
+}
+
 export async function generateCatalog(
   sourceMessage: string,
   dollarRate: number
@@ -85,12 +91,12 @@ export async function generateCatalog(
     if (extracted.length === 0) {
       return {
         ok: false,
-        error:
-          "No se pudo extraer ningún celular del mensaje. Revisá el formato.",
+        error: "No se pudo extraer ningún celular del mensaje. Revisá el formato.",
       };
     }
 
-    const previous = await readCatalog();
+    // Fresh read — carry previous margins without stale-cache risk
+    const previous = await readCatalogFresh();
     const prevMargins = new Map<string, number>();
     for (const p of previous.phones) {
       prevMargins.set(p.slug, p.marginUsd ?? 0);
@@ -127,9 +133,7 @@ export async function generateCatalog(
       phones,
     };
     await writeCatalog(catalog);
-    revalidateTag("catalog", "max");
-    revalidatePath("/");
-    revalidatePath("/producto/[slug]", "page");
+    invalidateCatalogCache();
     return { ok: true, catalog, warnings };
   } catch (err) {
     console.error(err);
@@ -149,7 +153,8 @@ export async function updatePricing(
     if (!dollarRate || dollarRate <= 0) {
       return { ok: false, error: "Valor de dólar inválido." };
     }
-    const current = await readCatalog();
+    // Always read fresh — never trust the ISR cache inside a server action
+    const current = await readCatalogFresh();
     if (current.phones.length === 0) {
       return { ok: false, error: "No hay catálogo para recalcular." };
     }
@@ -172,9 +177,7 @@ export async function updatePricing(
       phones,
     };
     await writeCatalog(next);
-    revalidateTag("catalog", "max");
-    revalidatePath("/");
-    revalidatePath("/producto/[slug]", "page");
+    invalidateCatalogCache();
     return { ok: true, catalog: next };
   } catch (err) {
     console.error(err);
@@ -191,14 +194,12 @@ export async function deletePhones(slugs: string[]): Promise<ActionResult> {
   try {
     await requireAuth();
     if (!slugs.length) return { ok: false, error: "No hay modelos seleccionados." };
-    const current = await readCatalog();
+    const current = await readCatalogFresh();
     const slugSet = new Set(slugs);
     const phones = current.phones.filter((p) => !slugSet.has(p.slug));
     const next: Catalog = { ...current, phones, updatedAt: new Date().toISOString() };
     await writeCatalog(next);
-    revalidateTag("catalog", "max");
-    revalidatePath("/");
-    revalidatePath("/producto/[slug]", "page");
+    invalidateCatalogCache();
     return { ok: true, catalog: next };
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : "Error inesperado" };
@@ -208,13 +209,11 @@ export async function deletePhones(slugs: string[]): Promise<ActionResult> {
 export async function deletePhone(slug: string): Promise<ActionResult> {
   try {
     await requireAuth();
-    const current = await readCatalog();
+    const current = await readCatalogFresh();
     const phones = current.phones.filter((p) => p.slug !== slug);
     const next: Catalog = { ...current, phones, updatedAt: new Date().toISOString() };
     await writeCatalog(next);
-    revalidateTag("catalog", "max");
-    revalidatePath("/");
-    revalidatePath("/producto/[slug]", "page");
+    invalidateCatalogCache();
     return { ok: true, catalog: next };
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : "Error inesperado" };
@@ -227,7 +226,7 @@ export async function updatePhone(
 ): Promise<ActionResult> {
   try {
     await requireAuth();
-    const current = await readCatalog();
+    const current = await readCatalogFresh();
     const idx = current.phones.findIndex((p) => p.slug === slug);
     if (idx === -1) return { ok: false, error: "Modelo no encontrado." };
     const phone = current.phones[idx];
@@ -244,9 +243,7 @@ export async function updatePhone(
     phones[idx] = updated;
     const next: Catalog = { ...current, phones, updatedAt: new Date().toISOString() };
     await writeCatalog(next);
-    revalidateTag("catalog", "max");
-    revalidatePath("/");
-    revalidatePath(`/producto/${slug}`, "page");
+    invalidateCatalogCache();
     return { ok: true, catalog: next };
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : "Error inesperado" };

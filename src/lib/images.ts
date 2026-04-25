@@ -33,16 +33,17 @@ async function resolveGoogleImage(query: string): Promise<string | null> {
     url.searchParams.set("imgType", "photo");
     url.searchParams.set("safe", "off");
 
-    const res = await fetch(url.toString(), {
-      next: { revalidate: 60 * 60 * 24 * 7 }, // cache 7 days
-    });
+    // no-store: outer unstable_cache handles persistence; we don't want
+    // a stale inner fetch cache returning wrong results after key bumps
+    const res = await fetch(url.toString(), { cache: "no-store" });
     if (!res.ok) {
-      console.warn("[images] Google API error", res.status);
+      console.warn("[images] Google API error", res.status, await res.text());
       return null;
     }
 
     const data = (await res.json()) as GoogleResponse;
     const items = data.items ?? [];
+    console.log(`[images] Google "${query}" → ${items.length} results`);
 
     for (const item of items) {
       const link = item.link ?? "";
@@ -162,6 +163,8 @@ async function resolveOne(brand: string, rawQuery: string): Promise<string | nul
 
 export const resolvePhoneImage = unstable_cache(
   async (brand: string, model: string): Promise<string | null> => {
+    const hasGoogle = !!(process.env.GOOGLE_SEARCH_API_KEY && process.env.GOOGLE_SEARCH_CX);
+    console.log(`[images] resolving "${brand} ${model}" — Google: ${hasGoogle}`);
     const queries = [
       `${brand} ${model}`,
       `${brand}_${model.replace(/\s+/g, "_")}`,
@@ -169,10 +172,15 @@ export const resolvePhoneImage = unstable_cache(
     ];
     for (const q of queries) {
       const img = await resolveOne(brand, q);
-      if (img) return img;
+      if (img) {
+        console.log(`[images] found for "${brand} ${model}": ${img.slice(0, 80)}`);
+        return img;
+      }
     }
+    console.log(`[images] no image found for "${brand} ${model}"`);
     return null;
   },
-  ["phone-image-v4"],
+  // Bump this key any time you want to force re-fetching for all phones
+  ["phone-image-v5"],
   { revalidate: 60 * 60 * 24 * 30 }
 );
