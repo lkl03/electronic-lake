@@ -7,6 +7,7 @@ import { formatArs } from "@/lib/whatsapp";
 import { getBrandPlaceholder } from "@/lib/placeholders";
 import {
   deletePhone,
+  deletePhones,
   fetchDollarBlue,
   generateCatalog,
   logout,
@@ -325,11 +326,65 @@ function GenerateSection({
 function CatalogSection({ catalog, setCatalog }: { catalog: Catalog; setCatalog: (c: Catalog) => void }) {
   const [editingSlug, setEditingSlug] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [confirmDeleteAll, setConfirmDeleteAll] = useState(false);
+  const [bulkPending, startBulk] = useTransition();
+  const [bulkError, setBulkError] = useState<string | null>(null);
 
   const filtered = catalog.phones.filter((p) => {
     const q = search.toLowerCase();
     return !q || `${p.brand} ${p.model} ${p.variant ?? ""} ${p.storage ?? ""}`.toLowerCase().includes(q);
   });
+
+  const allFilteredSelected = filtered.length > 0 && filtered.every((p) => selected.has(p.slug));
+
+  const toggleSelect = (slug: string) =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(slug)) next.delete(slug);
+      else next.add(slug);
+      return next;
+    });
+
+  const toggleSelectAll = () => {
+    if (allFilteredSelected) {
+      setSelected((prev) => {
+        const next = new Set(prev);
+        filtered.forEach((p) => next.delete(p.slug));
+        return next;
+      });
+    } else {
+      setSelected((prev) => {
+        const next = new Set(prev);
+        filtered.forEach((p) => next.add(p.slug));
+        return next;
+      });
+    }
+  };
+
+  const handleDeleteSelected = () => {
+    if (selected.size === 0) return;
+    setBulkError(null);
+    startBulk(async () => {
+      const res = await deletePhones(Array.from(selected));
+      if (!res.ok) { setBulkError(res.error); return; }
+      setCatalog(res.catalog);
+      setSelected(new Set());
+      setEditingSlug(null);
+    });
+  };
+
+  const handleDeleteAll = () => {
+    setBulkError(null);
+    startBulk(async () => {
+      const res = await deletePhones(catalog.phones.map((p) => p.slug));
+      if (!res.ok) { setBulkError(res.error); return; }
+      setCatalog(res.catalog);
+      setSelected(new Set());
+      setEditingSlug(null);
+      setConfirmDeleteAll(false);
+    });
+  };
 
   if (catalog.phones.length === 0) {
     return (
@@ -344,7 +399,8 @@ function CatalogSection({ catalog, setCatalog }: { catalog: Catalog; setCatalog:
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-4">
+      {/* Header */}
+      <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <span className="font-mono text-[10px] uppercase tracking-[0.25em] text-moss">03 · Catálogo</span>
           <h2 className="mt-1 font-display text-3xl leading-tight tracking-[-0.02em]">
@@ -364,22 +420,91 @@ function CatalogSection({ catalog, setCatalog }: { catalog: Catalog; setCatalog:
         />
       </div>
 
+      {/* Bulk action toolbar */}
+      <div className="flex flex-wrap items-center gap-3 border-y border-ink/12 py-3">
+        {/* Select-all checkbox */}
+        <label className="flex cursor-pointer items-center gap-2">
+          <input
+            type="checkbox"
+            checked={allFilteredSelected}
+            onChange={toggleSelectAll}
+            className="h-3.5 w-3.5 accent-moss"
+          />
+          <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-ink/55">
+            {allFilteredSelected ? "Deseleccionar todo" : "Seleccionar todo"}
+          </span>
+        </label>
+
+        {selected.size > 0 && (
+          <>
+            <span className="font-mono text-[10px] text-ink/40">|</span>
+            <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-ink/55">
+              {selected.size} seleccionado{selected.size !== 1 ? "s" : ""}
+            </span>
+            <button
+              onClick={handleDeleteSelected} disabled={bulkPending}
+              className="rounded-full border border-red-300 bg-red-50 px-4 py-1.5 font-mono text-[10px] uppercase tracking-[0.2em] text-red-700 transition-colors hover:bg-red-100 disabled:opacity-50"
+            >
+              {bulkPending ? "…" : `Eliminar seleccionados (${selected.size})`}
+            </button>
+          </>
+        )}
+
+        <span className="ml-auto font-mono text-[10px] text-ink/30">|</span>
+
+        {/* Delete all */}
+        {!confirmDeleteAll ? (
+          <button
+            onClick={() => setConfirmDeleteAll(true)}
+            disabled={bulkPending}
+            className="font-mono text-[10px] uppercase tracking-[0.2em] text-ink/40 transition-colors hover:text-red-600 disabled:opacity-40"
+          >
+            Eliminar todo el catálogo
+          </button>
+        ) : (
+          <span className="flex items-center gap-2">
+            <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-red-700">
+              ¿Seguro?
+            </span>
+            <button
+              onClick={handleDeleteAll} disabled={bulkPending}
+              className="rounded-full bg-red-600 px-3 py-1 font-mono text-[10px] uppercase tracking-[0.18em] text-white transition-colors hover:bg-red-700 disabled:opacity-50"
+            >
+              {bulkPending ? "…" : "Sí, borrar todo"}
+            </button>
+            <button
+              onClick={() => setConfirmDeleteAll(false)}
+              className="font-mono text-[10px] uppercase tracking-[0.18em] text-ink/50 hover:text-ink"
+            >
+              Cancelar
+            </button>
+          </span>
+        )}
+      </div>
+
+      {bulkError && (
+        <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-red-700">{bulkError}</p>
+      )}
+
+      {/* Rows */}
       <ul className="divide-y divide-ink/10">
         {filtered.map((p, i) => (
           <CatalogRow
             key={p.slug} phone={p} index={i}
             dollarRate={catalog.dollarRate}
             isEditing={editingSlug === p.slug}
+            isSelected={selected.has(p.slug)}
+            onToggleSelect={() => toggleSelect(p.slug)}
             onEdit={() => setEditingSlug(editingSlug === p.slug ? null : p.slug)}
             onSaved={(next) => { setCatalog(next); setEditingSlug(null); }}
-            onDeleted={(next) => { setCatalog(next); setEditingSlug(null); }}
+            onDeleted={(next) => { setCatalog(next); setEditingSlug(null); setSelected((s) => { const n = new Set(s); n.delete(p.slug); return n; }); }}
           />
         ))}
       </ul>
 
-      {filtered.length === 0 && (
+      {filtered.length === 0 && search && (
         <p className="py-10 text-center font-mono text-[11px] uppercase tracking-[0.22em] text-ink/40">
-          Sin resultados para "{search}"
+          Sin resultados para &ldquo;{search}&rdquo;
         </p>
       )}
     </div>
@@ -390,17 +515,19 @@ function CatalogSection({ catalog, setCatalog }: { catalog: Catalog; setCatalog:
 // Single catalog row + inline editor
 // ─────────────────────────────────────────────────────────────────────────────
 function CatalogRow({
-  phone, index, dollarRate, isEditing, onEdit, onSaved, onDeleted,
+  phone, index, dollarRate, isEditing, isSelected, onToggleSelect, onEdit, onSaved, onDeleted,
 }: {
   phone: Phone; index: number; dollarRate: number;
-  isEditing: boolean;
+  isEditing: boolean; isSelected: boolean;
+  onToggleSelect: () => void;
   onEdit: () => void;
   onSaved: (c: Catalog) => void;
   onDeleted: (c: Catalog) => void;
 }) {
-  const [pendingDel, startDel] = useTransition();
   const [pendingSave, startSave] = useTransition();
+  const [pendingDel, startDel] = useTransition();
   const [feedback, setFeedback] = useState("");
+  const [confirmDel, setConfirmDel] = useState(false);
 
   // Edit state
   const [brand, setBrand] = useState(phone.brand);
@@ -434,10 +561,10 @@ function CatalogRow({
   };
 
   const onDelete = () => {
-    if (!confirm(`¿Eliminar "${phone.brand} ${phone.model}"?`)) return;
+    setFeedback("");
     startDel(async () => {
       const res = await deletePhone(phone.slug);
-      if (!res.ok) { setFeedback(res.error); return; }
+      if (!res.ok) { setFeedback(res.error); setConfirmDel(false); return; }
       onDeleted(res.catalog);
     });
   };
@@ -448,8 +575,15 @@ function CatalogRow({
   return (
     <li className="group">
       {/* Summary row */}
-      <div className="flex items-center gap-4 py-4 pr-2">
-        <span className="w-7 shrink-0 font-mono text-[10px] text-ink/35">
+      <div className="flex items-center gap-3 py-4 pr-2">
+        {/* Checkbox */}
+        <input
+          type="checkbox"
+          checked={isSelected}
+          onChange={onToggleSelect}
+          className="h-3.5 w-3.5 shrink-0 accent-moss"
+        />
+        <span className="w-6 shrink-0 font-mono text-[10px] text-ink/35">
           {String(index + 1).padStart(2, "0")}
         </span>
         <div className="relative h-14 w-14 shrink-0 overflow-hidden bg-mist/30">
@@ -477,12 +611,32 @@ function CatalogRow({
           >
             {isEditing ? "Cancelar" : "Editar"}
           </button>
-          <button
-            onClick={onDelete} disabled={pendingDel}
-            className="rounded-full border border-red-200 px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.2em] text-red-600 transition-colors hover:bg-red-50 disabled:opacity-50"
-          >
-            {pendingDel ? "…" : "Eliminar"}
-          </button>
+
+          {/* Inline delete confirmation */}
+          {!confirmDel ? (
+            <button
+              onClick={() => setConfirmDel(true)}
+              className="rounded-full border border-red-200 px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.2em] text-red-500 transition-colors hover:border-red-400 hover:bg-red-50 hover:text-red-700"
+            >
+              Eliminar
+            </button>
+          ) : (
+            <span className="flex items-center gap-1.5">
+              <span className="font-mono text-[9px] uppercase tracking-[0.18em] text-red-700">¿Seguro?</span>
+              <button
+                onClick={onDelete} disabled={pendingDel}
+                className="rounded-full bg-red-600 px-2.5 py-1 font-mono text-[9px] uppercase tracking-[0.15em] text-white hover:bg-red-700 disabled:opacity-50"
+              >
+                {pendingDel ? "…" : "Sí"}
+              </button>
+              <button
+                onClick={() => setConfirmDel(false)}
+                className="rounded-full border border-ink/20 px-2.5 py-1 font-mono text-[9px] uppercase tracking-[0.15em] text-ink/60 hover:text-ink"
+              >
+                No
+              </button>
+            </span>
+          )}
         </div>
       </div>
 
@@ -542,12 +696,10 @@ function CatalogRow({
               placeholder="https://ejemplo.com/foto.jpg"
               className="mt-2 block w-full border border-ink/20 bg-paper px-3 py-2.5 font-mono text-xs leading-relaxed text-ink placeholder:text-ink/30 focus:border-moss focus:outline-none"
             />
-            {/* Preview */}
             <div className="mt-2 flex flex-wrap gap-2">
               {imagesRaw.split("\n").filter((u) => u.trim()).slice(0, 4).map((url, i) => (
                 <div key={i} className="relative h-16 w-16 bg-mist/30">
-                  <Image src={url.trim()} alt="" fill className="object-contain p-1" sizes="64px"
-                    onError={() => {}} />
+                  <Image src={url.trim()} alt="" fill className="object-contain p-1" sizes="64px" onError={() => {}} />
                 </div>
               ))}
             </div>

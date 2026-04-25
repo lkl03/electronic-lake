@@ -187,6 +187,24 @@ export async function updatePricing(
 
 // ─── CRUD ──────────────────────────────────────────────────────────────────
 
+export async function deletePhones(slugs: string[]): Promise<ActionResult> {
+  try {
+    await requireAuth();
+    if (!slugs.length) return { ok: false, error: "No hay modelos seleccionados." };
+    const current = await readCatalog();
+    const slugSet = new Set(slugs);
+    const phones = current.phones.filter((p) => !slugSet.has(p.slug));
+    const next: Catalog = { ...current, phones, updatedAt: new Date().toISOString() };
+    await writeCatalog(next);
+    revalidateTag("catalog", "max");
+    revalidatePath("/");
+    revalidatePath("/producto/[slug]", "page");
+    return { ok: true, catalog: next };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Error inesperado" };
+  }
+}
+
 export async function deletePhone(slug: string): Promise<ActionResult> {
   try {
     await requireAuth();
