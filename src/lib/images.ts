@@ -1,14 +1,63 @@
 import { unstable_cache } from "next/cache";
 
-// ─── Types ──────────────────────────────────────────────────────────────────
+// ─── Google Custom Search (primary, when configured) ─────────────────────────
 
-type DDGImageResult = {
-  image?: string;
-  url?: string;
-  title?: string;
-  width?: number;
-  height?: number;
-};
+type GoogleItem = { link?: string; image?: { contextLink?: string } };
+type GoogleResponse = { items?: GoogleItem[] };
+
+const BLOCKED_HOSTS = [
+  "amazon",
+  "ebay",
+  "aliexpress",
+  "mercadolibre",
+  "olx",
+  "shutterstock",
+  "gettyimages",
+  "istockphoto",
+  "alamy",
+  "depositphotos",
+];
+
+async function resolveGoogleImage(query: string): Promise<string | null> {
+  const apiKey = process.env.GOOGLE_SEARCH_API_KEY;
+  const cx = process.env.GOOGLE_SEARCH_CX;
+  if (!apiKey || !cx) return null;
+
+  try {
+    const url = new URL("https://www.googleapis.com/customsearch/v1");
+    url.searchParams.set("key", apiKey);
+    url.searchParams.set("cx", cx);
+    url.searchParams.set("q", query);
+    url.searchParams.set("searchType", "image");
+    url.searchParams.set("num", "5");
+    url.searchParams.set("imgType", "photo");
+    url.searchParams.set("safe", "off");
+
+    const res = await fetch(url.toString(), {
+      next: { revalidate: 60 * 60 * 24 * 7 }, // cache 7 days
+    });
+    if (!res.ok) {
+      console.warn("[images] Google API error", res.status);
+      return null;
+    }
+
+    const data = (await res.json()) as GoogleResponse;
+    const items = data.items ?? [];
+
+    for (const item of items) {
+      const link = item.link ?? "";
+      if (!link.startsWith("https")) continue;
+      if (BLOCKED_HOSTS.some((b) => link.includes(b))) continue;
+      return link;
+    }
+    return null;
+  } catch (err) {
+    console.warn("[images] Google search failed", err);
+    return null;
+  }
+}
+
+// ─── Wikipedia (fallback) ─────────────────────────────────────────────────────
 
 type WikiSummary = {
   thumbnail?: { source: string };
@@ -18,126 +67,6 @@ type WikiSummary = {
 type WikiSearchResult = {
   query?: { search?: Array<{ title: string }> };
 };
-
-// ─── DuckDuckGo (primary) ────────────────────────────────────────────────────
-
-const DDG_UA =
-  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
-
-async function getDDGVQD(query: string): Promise<string | null> {
-  try {
-    const res = await fetch(
-      `https://duckduckgo.com/?q=${encodeURIComponent(query)}&iax=images&ia=images`,
-      {
-        headers: {
-          "User-Agent": DDG_UA,
-          Accept: "text/html,application/xhtml+xml",
-          "Accept-Language": "en-US,en;q=0.9",
-        },
-        next: { revalidate: 60 * 60 * 24 },
-      }
-    );
-    if (!res.ok) return null;
-    const html = await res.text();
-    const match = html.match(/vqd=["']([^"']+)["']/);
-    return match?.[1] ?? null;
-  } catch {
-    return null;
-  }
-}
-
-async function fetchDDGImageResults(query: string): Promise<DDGImageResult[]> {
-  try {
-    const vqd = await getDDGVQD(query);
-    if (!vqd) return [];
-
-    const params = new URLSearchParams({
-      l: "us-en",
-      o: "json",
-      q: query,
-      vqd,
-      f: ",,,",
-      p: "1",
-    });
-
-    const res = await fetch(`https://duckduckgo.com/i.js?${params}`, {
-      headers: {
-        "User-Agent": DDG_UA,
-        Referer: "https://duckduckgo.com/",
-        Accept: "application/json, text/javascript, */*; q=0.01",
-        "Accept-Language": "en-US,en;q=0.9",
-        "X-Requested-With": "XMLHttpRequest",
-      },
-      next: { revalidate: 60 * 60 * 24 },
-    });
-
-    if (!res.ok) return [];
-    const data = (await res.json()) as { results?: DDGImageResult[] };
-    return data.results ?? [];
-  } catch {
-    return [];
-  }
-}
-
-// Domains with high-quality product shots
-const PREFERRED = [
-  "gsmarena.com",
-  "phonearena.com",
-  "kimovil.com",
-  "91mobiles.com",
-  "notebookcheck.net",
-  "techradar.com",
-  "theverge.com",
-  "cnet.com",
-  "rtings.com",
-  "androidauthority.com",
-  "sammobile.com",
-  "xda-developers.com",
-];
-
-// Domains to skip (ads, generic stock, icons)
-const BLOCKED = [
-  "amazon.com",
-  "ebay.com",
-  "aliexpress",
-  "mercadolibre",
-  "logo",
-  "icon",
-  "wallpaper",
-  "clipart",
-  "shutterstock",
-  "gettyimages",
-  "istockphoto",
-];
-
-function scoreDDGResult(r: DDGImageResult): number {
-  const url = (r.image ?? "").toLowerCase();
-  const source = (r.url ?? "").toLowerCase();
-  if (!url.startsWith("https")) return -1;
-  if (BLOCKED.some((b) => url.includes(b) || source.includes(b))) return -1;
-  let score = 0;
-  if (PREFERRED.some((p) => source.includes(p))) score += 10;
-  // Prefer landscape-ish or portrait images (not tiny squares)
-  const w = r.width ?? 0;
-  const h = r.height ?? 0;
-  if (w >= 400 && h >= 400) score += 3;
-  if (w >= 200 && h >= 200) score += 1;
-  return score;
-}
-
-async function resolveDDG(query: string): Promise<string | null> {
-  const results = await fetchDDGImageResults(query);
-  if (results.length === 0) return null;
-
-  const scored = results
-    .map((r) => ({ r, score: scoreDDGResult(r) }))
-    .filter(({ score }) => score >= 0)
-    .sort((a, b) => b.score - a.score);
-
-  return scored[0]?.r.image ?? null;
-}
-
-// ─── Wikipedia (fallback) ─────────────────────────────────────────────────────
 
 const WIKI_AGENT = "ElectronicLake/1.0 (https://electroniclake.vercel.app)";
 
@@ -195,35 +124,30 @@ async function searchWikipediaPage(query: string): Promise<string | null> {
   }
 }
 
-// ─── Core resolver ───────────────────────────────────────────────────────────
+// ─── Core resolver ────────────────────────────────────────────────────────────
 
 async function resolveOne(brand: string, rawQuery: string): Promise<string | null> {
-  // Strip RAM prefix from storage (e.g. "8+256GB" → "256GB")
+  // Strip RAM prefix: "8+256GB" → "256GB"
   const cleanQuery = rawQuery.replace(/\b\d+\+/g, "");
 
-  // DDG: try a few search terms
-  const ddgQueries = [
-    `${cleanQuery} official`,
-    cleanQuery,
-    `${cleanQuery} smartphone`,
-    `${brand} ${cleanQuery.split(" ").slice(-2).join(" ")}`,
+  // 1. Try Google Custom Search (if configured)
+  const googleQueries = [
+    `${brand} ${cleanQuery} smartphone`,
+    `${brand} ${cleanQuery}`,
   ];
-  for (const q of ddgQueries) {
-    const img = await resolveDDG(q);
+  for (const q of googleQueries) {
+    const img = await resolveGoogleImage(q);
     if (img) return img;
   }
 
-  // Wikipedia fallback
-  const wikiQueries = [
-    rawQuery,
-    cleanQuery,
-    `${cleanQuery} smartphone`,
-    `${cleanQuery} phone`,
-  ];
+  // 2. Wikipedia direct lookup
+  const wikiQueries = [rawQuery, cleanQuery, `${cleanQuery} smartphone`, `${cleanQuery} phone`];
   for (const q of wikiQueries) {
     const img = await fetchWikipediaImage(q);
     if (img) return img;
   }
+
+  // 3. Wikipedia full-text search
   const searchQueries = [
     cleanQuery,
     `${brand} ${cleanQuery.split(" ").slice(-2).join(" ")}`,
@@ -249,6 +173,6 @@ export const resolvePhoneImage = unstable_cache(
     }
     return null;
   },
-  ["phone-image-v3"],
+  ["phone-image-v4"],
   { revalidate: 60 * 60 * 24 * 30 }
 );

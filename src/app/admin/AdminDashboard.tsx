@@ -528,6 +528,8 @@ function CatalogRow({
   const [pendingDel, startDel] = useTransition();
   const [feedback, setFeedback] = useState("");
   const [confirmDel, setConfirmDel] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState("");
 
   // Edit state
   const [brand, setBrand] = useState(phone.brand);
@@ -540,6 +542,28 @@ function CatalogRow({
   const [marginUsd, setMarginUsd] = useState(phone.marginUsd ?? 0);
   const [imagesRaw, setImagesRaw] = useState(phone.images.join("\n"));
   const [highlights, setHighlights] = useState(phone.highlights.join("\n"));
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadError("");
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch("/api/upload-image", { method: "POST", body: fd });
+      const data = (await res.json()) as { url?: string; error?: string };
+      if (!res.ok || !data.url) {
+        setUploadError(data.error ?? "Error al subir imagen");
+        return;
+      }
+      setImagesRaw((prev) => (prev.trim() ? `${prev.trim()}\n${data.url}` : data.url!));
+    } finally {
+      setUploading(false);
+      // reset so the same file can be re-uploaded if needed
+      e.target.value = "";
+    }
+  };
 
   const onSave = () => {
     setFeedback("");
@@ -687,22 +711,48 @@ function CatalogRow({
           </div>
 
           <div>
-            <label className="font-mono text-[10px] uppercase tracking-[0.25em] text-ink/60">
-              URLs de imágenes <span className="normal-case text-ink/35">(una por línea)</span>
-            </label>
+            <div className="flex items-center justify-between gap-4">
+              <label className="font-mono text-[10px] uppercase tracking-[0.25em] text-ink/60">
+                Imágenes
+              </label>
+              {/* File upload button */}
+              <label className={`flex cursor-pointer items-center gap-2 rounded-full border px-4 py-1.5 font-mono text-[10px] uppercase tracking-[0.2em] transition-colors ${uploading ? "border-moss text-moss" : "border-ink/25 text-ink/60 hover:border-ink hover:text-ink"}`}>
+                {uploading ? (
+                  <>
+                    <span className="inline-block h-2 w-2 animate-spin rounded-full border border-moss/30 border-t-moss" />
+                    Subiendo…
+                  </>
+                ) : (
+                  "↑ Subir archivo"
+                )}
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/gif,image/avif"
+                  className="hidden"
+                  disabled={uploading}
+                  onChange={handleFileUpload}
+                />
+              </label>
+            </div>
+            {uploadError && (
+              <p className="mt-1 font-mono text-[10px] text-red-600">{uploadError}</p>
+            )}
             <textarea
-              rows={4} value={imagesRaw}
+              rows={3} value={imagesRaw}
               onChange={(e) => setImagesRaw(e.target.value)}
-              placeholder="https://ejemplo.com/foto.jpg"
+              placeholder="https://ejemplo.com/foto.jpg&#10;(una URL por línea, o usá ↑ para subir)"
               className="mt-2 block w-full border border-ink/20 bg-paper px-3 py-2.5 font-mono text-xs leading-relaxed text-ink placeholder:text-ink/30 focus:border-moss focus:outline-none"
             />
-            <div className="mt-2 flex flex-wrap gap-2">
-              {imagesRaw.split("\n").filter((u) => u.trim()).slice(0, 4).map((url, i) => (
-                <div key={i} className="relative h-16 w-16 bg-mist/30">
-                  <Image src={url.trim()} alt="" fill className="object-contain p-1" sizes="64px" onError={() => {}} />
-                </div>
-              ))}
-            </div>
+            {/* Preview */}
+            {imagesRaw.split("\n").filter((u) => u.trim()).length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-2">
+                {imagesRaw.split("\n").filter((u) => u.trim()).slice(0, 6).map((url, i) => (
+                  <div key={i} className="relative h-16 w-16 bg-mist/20">
+                    <Image src={url.trim()} alt="" fill className="object-contain p-1" sizes="64px" onError={() => {}} />
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <div>
