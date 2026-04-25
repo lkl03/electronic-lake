@@ -1,9 +1,16 @@
-import { unstable_cache } from "next/cache";
+/**
+ * Phone image resolver.
+ *
+ * NO unstable_cache here — the catalog JSON is the persistence layer.
+ * This function is called once per phone during catalog generation.
+ * Results are stored in catalog.phones[n].images and never re-fetched
+ * until the catalog is regenerated.
+ *
+ * Primary:  Google Custom Search API  (GOOGLE_SEARCH_API_KEY + GOOGLE_SEARCH_CX)
+ * Fallback: Wikipedia REST API
+ */
 
-// ─── Google Custom Search (primary, when configured) ─────────────────────────
-
-type GoogleItem = { link?: string; image?: { contextLink?: string } };
-type GoogleResponse = { items?: GoogleItem[] };
+// ─── Config ───────────────────────────────────────────────────────────────────
 
 const BLOCKED_HOSTS = [
   "amazon",
@@ -18,81 +25,86 @@ const BLOCKED_HOSTS = [
   "depositphotos",
 ];
 
-async function resolveGoogleImage(query: string): Promise<string | null> {
-  const apiKey = process.env.GOOGLE_SEARCH_API_KEY;
+// ─── Google Custom Search ─────────────────────────────────────────────────────
+
+async function googleImageSearch(query: string): Promise<string | null> {
+  const key = process.env.GOOGLE_SEARCH_API_KEY;
   const cx = process.env.GOOGLE_SEARCH_CX;
-  if (!apiKey || !cx) return null;
+
+  if (!key || !cx) {
+    console.log("[images] Google not configured (missing env vars)");
+    return null;
+  }
+
+  const url = new URL("https://www.googleapis.com/customsearch/v1");
+  url.searchParams.set("key", key);
+  url.searchParams.set("cx", cx);
+  url.searchParams.set("q", query);
+  url.searchParams.set("searchType", "image");
+  url.searchParams.set("num", "5");
+  url.searchParams.set("imgType", "photo");
+
+  console.log(`[images] Google search: "${query}"`);
 
   try {
-    const url = new URL("https://www.googleapis.com/customsearch/v1");
-    url.searchParams.set("key", apiKey);
-    url.searchParams.set("cx", cx);
-    url.searchParams.set("q", query);
-    url.searchParams.set("searchType", "image");
-    url.searchParams.set("num", "5");
-    url.searchParams.set("imgType", "photo");
-    url.searchParams.set("safe", "off");
-
-    // no-store: outer unstable_cache handles persistence; we don't want
-    // a stale inner fetch cache returning wrong results after key bumps
     const res = await fetch(url.toString(), { cache: "no-store" });
+
     if (!res.ok) {
-      console.warn("[images] Google API error", res.status, await res.text());
+      const body = await res.text();
+      console.error(`[images] Google error ${res.status}: ${body.slice(0, 300)}`);
       return null;
     }
 
-    const data = (await res.json()) as GoogleResponse;
+    const data = (await res.json()) as { items?: Array<{ link?: string }> };
     const items = data.items ?? [];
-    console.log(`[images] Google "${query}" → ${items.length} results`);
+    console.log(`[images] Google returned ${items.length} result(s) for "${query}"`);
 
     for (const item of items) {
       const link = item.link ?? "";
       if (!link.startsWith("https")) continue;
       if (BLOCKED_HOSTS.some((b) => link.includes(b))) continue;
+      console.log(`[images] ✓ Google pick: ${link.slice(0, 100)}`);
       return link;
     }
+
+    console.log(`[images] No usable Google result for "${query}"`);
     return null;
   } catch (err) {
-    console.warn("[images] Google search failed", err);
+    console.error("[images] Google fetch error:", err);
     return null;
   }
 }
 
 // ─── Wikipedia (fallback) ─────────────────────────────────────────────────────
 
+const WIKI_UA = "ElectronicLake/1.0 (https://electroniclake.vercel.app)";
+
 type WikiSummary = {
   thumbnail?: { source: string };
   originalimage?: { source: string };
 };
-
-type WikiSearchResult = {
+type WikiSearch = {
   query?: { search?: Array<{ title: string }> };
 };
 
-const WIKI_AGENT = "ElectronicLake/1.0 (https://electroniclake.vercel.app)";
-
-async function fetchWikipediaImage(title: string): Promise<string | null> {
-  const encoded = encodeURIComponent(title.replace(/\s+/g, "_"));
+async function wikipediaImage(title: string): Promise<string | null> {
   try {
+    const encoded = encodeURIComponent(title.replace(/\s+/g, "_"));
     const res = await fetch(
       `https://en.wikipedia.org/api/rest_v1/page/summary/${encoded}`,
-      {
-        headers: { "User-Agent": WIKI_AGENT, Accept: "application/json" },
-        next: { revalidate: 60 * 60 * 24 * 30 },
-      }
+      { headers: { "User-Agent": WIKI_UA }, cache: "no-store" }
     );
     if (!res.ok) return null;
     const data = (await res.json()) as WikiSummary;
     const src = data.originalimage?.source ?? data.thumbnail?.source ?? null;
-    if (src && (src.includes("Replacement_") || src.endsWith(".svg")))
-      return null;
+    if (!src || src.includes("Replacement_") || src.endsWith(".svg")) return null;
     return src;
   } catch {
     return null;
   }
 }
 
-async function searchWikipediaPage(query: string): Promise<string | null> {
+async function wikipediaSearch(query: string): Promise<string | null> {
   try {
     const params = new URLSearchParams({
       action: "query",
@@ -104,19 +116,15 @@ async function searchWikipediaPage(query: string): Promise<string | null> {
       origin: "*",
     });
     const res = await fetch(
-      `https://en.wikipedia.org/w/api.php?${params.toString()}`,
-      {
-        headers: { "User-Agent": WIKI_AGENT },
-        next: { revalidate: 60 * 60 * 24 * 30 },
-      }
+      `https://en.wikipedia.org/w/api.php?${params}`,
+      { headers: { "User-Agent": WIKI_UA }, cache: "no-store" }
     );
     if (!res.ok) return null;
-    const data = (await res.json()) as WikiSearchResult;
-    const results = data?.query?.search ?? [];
-    for (const result of results) {
+    const data = (await res.json()) as WikiSearch;
+    for (const result of data?.query?.search ?? []) {
       const t = result.title.toLowerCase();
       if (t.includes("list of") || t.includes("comparison")) continue;
-      const img = await fetchWikipediaImage(result.title);
+      const img = await wikipediaImage(result.title);
       if (img) return img;
     }
     return null;
@@ -125,62 +133,53 @@ async function searchWikipediaPage(query: string): Promise<string | null> {
   }
 }
 
-// ─── Core resolver ────────────────────────────────────────────────────────────
+// ─── Public API ───────────────────────────────────────────────────────────────
 
-async function resolveOne(brand: string, rawQuery: string): Promise<string | null> {
+/**
+ * Resolve the best available image for a phone.
+ * Tries Google Custom Search first, then Wikipedia.
+ * NOT cached — results are stored in the catalog JSON after generation.
+ */
+export async function resolvePhoneImage(
+  brand: string,
+  model: string
+): Promise<string | null> {
   // Strip RAM prefix: "8+256GB" → "256GB"
-  const cleanQuery = rawQuery.replace(/\b\d+\+/g, "");
+  const cleanModel = model.replace(/\b\d+\+/g, "");
 
-  // 1. Try Google Custom Search (if configured)
+  console.log(`[images] Resolving: ${brand} ${cleanModel}`);
+
+  // 1. Google (primary)
   const googleQueries = [
-    `${brand} ${cleanQuery} smartphone`,
-    `${brand} ${cleanQuery}`,
+    `${brand} ${cleanModel} smartphone`,
+    `${brand} ${cleanModel}`,
   ];
   for (const q of googleQueries) {
-    const img = await resolveGoogleImage(q);
+    const img = await googleImageSearch(q);
     if (img) return img;
   }
 
-  // 2. Wikipedia direct lookup
-  const wikiQueries = [rawQuery, cleanQuery, `${cleanQuery} smartphone`, `${cleanQuery} phone`];
-  for (const q of wikiQueries) {
-    const img = await fetchWikipediaImage(q);
-    if (img) return img;
-  }
-
-  // 3. Wikipedia full-text search
-  const searchQueries = [
-    cleanQuery,
-    `${brand} ${cleanQuery.split(" ").slice(-2).join(" ")}`,
+  // 2. Wikipedia direct (fallback)
+  const wikiTitles = [
+    `${brand} ${cleanModel}`,
+    cleanModel,
+    `${cleanModel} (smartphone)`,
   ];
-  for (const q of searchQueries) {
-    const img = await searchWikipediaPage(q);
-    if (img) return img;
+  for (const t of wikiTitles) {
+    const img = await wikipediaImage(t);
+    if (img) {
+      console.log(`[images] Wikipedia direct: ${img.slice(0, 80)}`);
+      return img;
+    }
   }
 
+  // 3. Wikipedia search (last resort)
+  const wikiImg = await wikipediaSearch(`${brand} ${cleanModel} smartphone`);
+  if (wikiImg) {
+    console.log(`[images] Wikipedia search: ${wikiImg.slice(0, 80)}`);
+    return wikiImg;
+  }
+
+  console.log(`[images] No image found for: ${brand} ${cleanModel}`);
   return null;
 }
-
-export const resolvePhoneImage = unstable_cache(
-  async (brand: string, model: string): Promise<string | null> => {
-    const hasGoogle = !!(process.env.GOOGLE_SEARCH_API_KEY && process.env.GOOGLE_SEARCH_CX);
-    console.log(`[images] resolving "${brand} ${model}" — Google: ${hasGoogle}`);
-    const queries = [
-      `${brand} ${model}`,
-      `${brand}_${model.replace(/\s+/g, "_")}`,
-      model,
-    ];
-    for (const q of queries) {
-      const img = await resolveOne(brand, q);
-      if (img) {
-        console.log(`[images] found for "${brand} ${model}": ${img.slice(0, 80)}`);
-        return img;
-      }
-    }
-    console.log(`[images] no image found for "${brand} ${model}"`);
-    return null;
-  },
-  // Bump this key any time you want to force re-fetching for all phones
-  ["phone-image-v5"],
-  { revalidate: 60 * 60 * 24 * 30 }
-);
