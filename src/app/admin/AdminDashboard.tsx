@@ -11,9 +11,11 @@ import {
   fetchDollarBlue,
   generateCatalog,
   logout,
+  testGoogleImages,
   updatePhone,
   updatePricing,
 } from "./actions";
+import type { GoogleTestResult } from "./actions";
 
 type Feedback = { type: "success" | "error"; text: string; warnings?: string[]; at?: string };
 
@@ -91,9 +93,11 @@ function GenerateSection({
   );
   const [generateFeedback, setGenerateFeedback] = useState<Feedback | null>(null);
   const [pricingFeedback, setPricingFeedback] = useState<Feedback | null>(null);
+  const [googleTest, setGoogleTest] = useState<GoogleTestResult | null>(null);
   const [pendingGenerate, startGenerate] = useTransition();
   const [pendingPricing, startPricing] = useTransition();
   const [pendingDollar, startDollar] = useTransition();
+  const [pendingGoogleTest, startGoogleTest] = useTransition();
   const [localCatalog, setLocalCatalog] = useState<Catalog>(catalog);
 
   useEffect(() => {
@@ -216,6 +220,54 @@ function GenerateSection({
             <p className="mt-1.5 font-mono text-[10px] uppercase tracking-[0.22em] text-ink/40">
               ARS = (USD importador + ganancia) × dólar · redondeado
             </p>
+          </div>
+
+          {/* Google image test */}
+          <div className="border border-ink/15 bg-paper-soft p-4">
+            <div className="flex flex-wrap items-center gap-4">
+              <div>
+                <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-ink/60">Imágenes · Google Custom Search</p>
+                <p className="mt-0.5 font-mono text-[9px] uppercase tracking-[0.18em] text-ink/35">Verificá que la API funcione antes de generar</p>
+              </div>
+              <button
+                type="button"
+                disabled={pendingGoogleTest}
+                onClick={() => {
+                  setGoogleTest(null);
+                  startGoogleTest(async () => {
+                    const r = await testGoogleImages();
+                    setGoogleTest(r);
+                  });
+                }}
+                className="rounded-full border border-ink/30 px-4 py-2 font-mono text-[10px] uppercase tracking-[0.2em] text-ink/70 transition-colors hover:border-ink hover:text-ink disabled:opacity-50"
+              >
+                {pendingGoogleTest ? "Probando…" : "Probar Google →"}
+              </button>
+            </div>
+            {googleTest && (
+              <div className={`mt-3 border-l-2 px-4 py-3 font-mono text-[10px] ${googleTest.ok ? "border-moss bg-moss/10 text-pine" : "border-red-500 bg-red-50 text-red-800"}`}>
+                {googleTest.ok ? (
+                  <>
+                    <p className="font-semibold">✓ Google OK — imagen encontrada para &ldquo;{googleTest.query}&rdquo;</p>
+                    <p className="mt-1 break-all opacity-70">{googleTest.imageUrl}</p>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={googleTest.imageUrl} alt="test" className="mt-2 h-24 w-auto object-contain" />
+                  </>
+                ) : (
+                  <>
+                    <p className="font-semibold">✗ Error: {googleTest.error}</p>
+                    {googleTest.status && <p className="mt-1 opacity-70">HTTP {googleTest.status}</p>}
+                    {googleTest.detail && (
+                      <pre className="mt-2 whitespace-pre-wrap break-all text-[9px] opacity-60">{googleTest.detail}</pre>
+                    )}
+                    <p className="mt-3 leading-relaxed opacity-80">
+                      Si el error dice &ldquo;image search&rdquo;: andá a programmablesearchengine.google.com → tu motor → Editar → Búsqueda de imágenes → activar.<br/>
+                      Si dice &ldquo;Search the entire web&rdquo;: activá esa opción en Configuración → Básico.
+                    </p>
+                  </>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="flex flex-wrap items-center gap-4 border-t border-ink/15 pt-7">
@@ -610,8 +662,9 @@ function CatalogRow({
         <span className="w-6 shrink-0 font-mono text-[10px] text-ink/35">
           {String(index + 1).padStart(2, "0")}
         </span>
-        <div className="relative h-14 w-14 shrink-0 overflow-hidden bg-mist/30">
-          <Image src={imgSrc} alt={phone.model} fill className="object-contain p-1" sizes="56px" />
+        <div className="h-14 w-14 shrink-0 overflow-hidden bg-mist/30">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={imgSrc} alt={phone.model} className="h-full w-full object-contain p-1" />
         </div>
         <div className="min-w-0 flex-1">
           <p className="truncate font-display text-lg leading-tight tracking-[-0.01em]">
@@ -743,12 +796,13 @@ function CatalogRow({
               placeholder="https://ejemplo.com/foto.jpg&#10;(una URL por línea, o usá ↑ para subir)"
               className="mt-2 block w-full border border-ink/20 bg-paper px-3 py-2.5 font-mono text-xs leading-relaxed text-ink placeholder:text-ink/30 focus:border-moss focus:outline-none"
             />
-            {/* Preview */}
+            {/* Preview — plain <img> so any domain works */}
             {imagesRaw.split("\n").filter((u) => u.trim()).length > 0 && (
               <div className="mt-2 flex flex-wrap gap-2">
                 {imagesRaw.split("\n").filter((u) => u.trim()).slice(0, 6).map((url, i) => (
-                  <div key={i} className="relative h-16 w-16 bg-mist/20">
-                    <Image src={url.trim()} alt="" fill className="object-contain p-1" sizes="64px" onError={() => {}} />
+                  <div key={i} className="h-16 w-16 bg-mist/20">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={url.trim()} alt="" className="h-full w-full object-contain p-1" />
                   </div>
                 ))}
               </div>

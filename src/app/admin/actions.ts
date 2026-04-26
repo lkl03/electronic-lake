@@ -73,6 +73,48 @@ export async function fetchDollarBlue(): Promise<DollarResult> {
   }
 }
 
+// ─── Diagnostics ─────────────────────────────────────────────────────────────
+
+export type GoogleTestResult =
+  | { ok: true; imageUrl: string; query: string }
+  | { ok: false; error: string; status?: number; detail?: string };
+
+export async function testGoogleImages(): Promise<GoogleTestResult> {
+  const key = process.env.GOOGLE_SEARCH_API_KEY;
+  const cx = process.env.GOOGLE_SEARCH_CX;
+
+  if (!key) return { ok: false, error: "GOOGLE_SEARCH_API_KEY no está configurado en Vercel." };
+  if (!cx)  return { ok: false, error: "GOOGLE_SEARCH_CX no está configurado en Vercel." };
+
+  const query = "Samsung Galaxy S25 smartphone";
+  const url = new URL("https://www.googleapis.com/customsearch/v1");
+  url.searchParams.set("key", key);
+  url.searchParams.set("cx", cx);
+  url.searchParams.set("q", query);
+  url.searchParams.set("searchType", "image");
+  url.searchParams.set("num", "3");
+
+  try {
+    const res = await fetch(url.toString(), { cache: "no-store" });
+    const body = await res.json() as {
+      items?: Array<{ link?: string }>;
+      error?: { message?: string; errors?: Array<{ message?: string }> };
+    };
+
+    if (!res.ok) {
+      const msg = body.error?.message ?? body.error?.errors?.[0]?.message ?? `HTTP ${res.status}`;
+      return { ok: false, error: msg, status: res.status, detail: JSON.stringify(body.error, null, 2) };
+    }
+
+    const link = body.items?.[0]?.link ?? "";
+    if (!link) return { ok: false, error: "La API respondió OK pero devolvió 0 resultados de imagen. Asegurate de que la búsqueda de imágenes esté habilitada en tu Programmable Search Engine." };
+
+    return { ok: true, imageUrl: link, query };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Error de red al contactar Google." };
+  }
+}
+
 // ─── Generate ─────────────────────────────────────────────────────────────────
 
 export async function generateCatalog(
