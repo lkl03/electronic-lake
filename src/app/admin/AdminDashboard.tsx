@@ -143,7 +143,7 @@ function GenerateSection({
   const onApplyPricing = () => {
     setPricingFeedback(null);
     startPricing(async () => {
-      const res = await updatePricing(dollarRate, margins);
+      const res = await updatePricing(dollarRate, margins, localCatalog);
       if (!res.ok) { setPricingFeedback({ type: "error", text: res.error }); return; }
       setLocalCatalog(res.catalog);
       setCatalog(res.catalog);

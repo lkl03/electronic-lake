@@ -19,32 +19,24 @@ export type DollarResult =
   | { ok: true; rate: number }
   | { ok: false; error: string };
 
-export async function fetchDollarBlue(): Promise<DollarResult> {
-  try {
-    const res = await fetch("https://dolarapi.com/v1/dolares/blue", {
-      cache: "no-store",
-    });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = (await res.json()) as { venta?: number; compra?: number };
-    const venta = data.venta;
-    if (!venta || typeof venta !== "number") {
-      throw new Error("Respuesta inesperada de la API");
-    }
-    return { ok: true, rate: Math.round(venta + 20) };
-  } catch (err) {
-    console.error("fetchDollarBlue", err);
-    return {
-      ok: false,
-      error:
-        err instanceof Error ? err.message : "No se pudo obtener el dólar blue.",
-    };
-  }
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+async function requireAuth() {
+  const store = await cookies();
+  if (store.get("admin_auth")?.value !== "1") throw new Error("No autorizado");
 }
+
+function invalidateCache() {
+  revalidateTag("catalog", "max");
+  revalidatePath("/");
+  revalidatePath("/producto/[slug]", "page");
+}
+
+// ─── Auth ─────────────────────────────────────────────────────────────────────
 
 export async function login(password: string): Promise<{ ok: boolean }> {
   const expected = process.env.ADMIN_PASSWORD;
-  if (!expected) return { ok: false };
-  if (password !== expected) return { ok: false };
+  if (!expected || password !== expected) return { ok: false };
   const store = await cookies();
   store.set("admin_auth", "1", {
     httpOnly: true,
@@ -61,18 +53,27 @@ export async function logout() {
   store.delete("admin_auth");
 }
 
-async function requireAuth() {
-  const store = await cookies();
-  if (store.get("admin_auth")?.value !== "1") {
-    throw new Error("No autorizado");
+// ─── Dollar ───────────────────────────────────────────────────────────────────
+
+export async function fetchDollarBlue(): Promise<DollarResult> {
+  try {
+    const res = await fetch("https://dolarapi.com/v1/dolares/blue", {
+      cache: "no-store",
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = (await res.json()) as { venta?: number };
+    const venta = data.venta;
+    if (!venta || typeof venta !== "number") throw new Error("Respuesta inesperada");
+    return { ok: true, rate: Math.round(venta + 20) };
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : "No se pudo obtener el dólar blue.",
+    };
   }
 }
 
-function invalidateCatalogCache() {
-  revalidateTag("catalog", "max");
-  revalidatePath("/");
-  revalidatePath("/producto/[slug]", "page");
-}
+// ─── Generate ─────────────────────────────────────────────────────────────────
 
 export async function generateCatalog(
   sourceMessage: string,
@@ -80,27 +81,17 @@ export async function generateCatalog(
 ): Promise<ActionResult> {
   try {
     await requireAuth();
-    if (!sourceMessage.trim()) {
-      return { ok: false, error: "El mensaje del importador está vacío." };
-    }
-    if (!dollarRate || dollarRate <= 0) {
-      return { ok: false, error: "El valor del dólar debe ser mayor a 0." };
-    }
+    if (!sourceMessage.trim()) return { ok: false, error: "El mensaje del importador está vacío." };
+    if (!dollarRate || dollarRate <= 0) return { ok: false, error: "El valor del dólar debe ser mayor a 0." };
 
     const extracted = await extractPhonesFromMessage(sourceMessage);
     if (extracted.length === 0) {
-      return {
-        ok: false,
-        error: "No se pudo extraer ningún celular del mensaje. Revisá el formato.",
-      };
+      return { ok: false, error: "No se pudo extraer ningún celular del mensaje. Revisá el formato." };
     }
 
-    // Fresh read — carry previous margins without stale-cache risk
+    // Read previous catalog to carry margins forward
     const previous = await readCatalogFresh();
-    const prevMargins = new Map<string, number>();
-    for (const p of previous.phones) {
-      prevMargins.set(p.slug, p.marginUsd ?? 0);
-    }
+    const prevMargins = new Map(previous.phones.map((p) => [p.slug, p.marginUsd ?? 0]));
 
     const warnings: string[] = [];
     const phones: Phone[] = await Promise.all(
@@ -109,20 +100,14 @@ export async function generateCatalog(
           enrichSpecs(e),
           resolvePhoneImage(e.brand, [e.model, e.variant].filter(Boolean).join(" ")),
         ]);
-        if (!imgRes) {
-          warnings.push(`Sin imagen automática: ${e.brand} ${e.model}`);
-        }
+        if (!imgRes) warnings.push(`Sin imagen: ${e.brand} ${e.model}`);
         const draft = buildPhone(e, dollarRate, {
           specs: specsRes.specs,
           highlights: specsRes.highlights,
           images: imgRes ? [imgRes] : [],
         });
-        const carriedMargin = prevMargins.get(draft.slug) ?? 0;
-        return {
-          ...draft,
-          marginUsd: carriedMargin,
-          priceArs: Math.round((draft.usd + carriedMargin) * dollarRate),
-        };
+        const margin = prevMargins.get(draft.slug) ?? 0;
+        return { ...draft, marginUsd: margin, priceArs: Math.round((draft.usd + margin) * dollarRate) };
       })
     );
 
@@ -133,73 +118,67 @@ export async function generateCatalog(
       phones,
     };
     await writeCatalog(catalog);
-    invalidateCatalogCache();
+    invalidateCache();
     return { ok: true, catalog, warnings };
   } catch (err) {
-    console.error(err);
-    return {
-      ok: false,
-      error: err instanceof Error ? err.message : "Error inesperado",
-    };
+    console.error("[generateCatalog]", err);
+    return { ok: false, error: err instanceof Error ? err.message : "Error inesperado" };
   }
 }
 
+// ─── Pricing ──────────────────────────────────────────────────────────────────
+
+/**
+ * Apply margins + dollar rate to an existing catalog snapshot.
+ * The client passes `currentCatalog` directly — no blob read needed,
+ * which eliminates all stale-cache failures.
+ */
 export async function updatePricing(
   dollarRate: number,
-  marginsBySlug: Record<string, number>
+  marginsBySlug: Record<string, number>,
+  currentCatalog: Catalog
 ): Promise<ActionResult> {
   try {
     await requireAuth();
-    if (!dollarRate || dollarRate <= 0) {
-      return { ok: false, error: "Valor de dólar inválido." };
-    }
-    // Always read fresh — never trust the ISR cache inside a server action
-    const current = await readCatalogFresh();
-    if (current.phones.length === 0) {
-      return { ok: false, error: "No hay catálogo para recalcular." };
-    }
-    const phones = current.phones.map((p) => {
-      const rawMargin = marginsBySlug[p.slug];
-      const marginUsd = Math.max(
-        0,
-        Number.isFinite(rawMargin) ? Number(rawMargin) : p.marginUsd ?? 0
-      );
-      return {
-        ...p,
-        marginUsd,
-        priceArs: Math.round((p.usd + marginUsd) * dollarRate),
-      };
+    if (!dollarRate || dollarRate <= 0) return { ok: false, error: "Valor de dólar inválido." };
+    if (!currentCatalog.phones.length) return { ok: false, error: "No hay modelos en el catálogo." };
+
+    const phones = currentCatalog.phones.map((p) => {
+      const raw = marginsBySlug[p.slug];
+      const marginUsd = Math.max(0, Number.isFinite(raw) ? Number(raw) : p.marginUsd ?? 0);
+      return { ...p, marginUsd, priceArs: Math.round((p.usd + marginUsd) * dollarRate) };
     });
+
     const next: Catalog = {
-      ...current,
+      ...currentCatalog,
       dollarRate,
       updatedAt: new Date().toISOString(),
       phones,
     };
     await writeCatalog(next);
-    invalidateCatalogCache();
+    invalidateCache();
     return { ok: true, catalog: next };
   } catch (err) {
-    console.error(err);
-    return {
-      ok: false,
-      error: err instanceof Error ? err.message : "Error inesperado",
-    };
+    console.error("[updatePricing]", err);
+    return { ok: false, error: err instanceof Error ? err.message : "Error inesperado" };
   }
 }
 
-// ─── CRUD ──────────────────────────────────────────────────────────────────
+// ─── CRUD ─────────────────────────────────────────────────────────────────────
 
 export async function deletePhones(slugs: string[]): Promise<ActionResult> {
   try {
     await requireAuth();
     if (!slugs.length) return { ok: false, error: "No hay modelos seleccionados." };
     const current = await readCatalogFresh();
-    const slugSet = new Set(slugs);
-    const phones = current.phones.filter((p) => !slugSet.has(p.slug));
-    const next: Catalog = { ...current, phones, updatedAt: new Date().toISOString() };
+    const set = new Set(slugs);
+    const next: Catalog = {
+      ...current,
+      phones: current.phones.filter((p) => !set.has(p.slug)),
+      updatedAt: new Date().toISOString(),
+    };
     await writeCatalog(next);
-    invalidateCatalogCache();
+    invalidateCache();
     return { ok: true, catalog: next };
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : "Error inesperado" };
@@ -210,10 +189,13 @@ export async function deletePhone(slug: string): Promise<ActionResult> {
   try {
     await requireAuth();
     const current = await readCatalogFresh();
-    const phones = current.phones.filter((p) => p.slug !== slug);
-    const next: Catalog = { ...current, phones, updatedAt: new Date().toISOString() };
+    const next: Catalog = {
+      ...current,
+      phones: current.phones.filter((p) => p.slug !== slug),
+      updatedAt: new Date().toISOString(),
+    };
     await writeCatalog(next);
-    invalidateCatalogCache();
+    invalidateCache();
     return { ok: true, catalog: next };
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : "Error inesperado" };
@@ -232,18 +214,17 @@ export async function updatePhone(
     const phone = current.phones[idx];
     const usd = patch.usd ?? phone.usd;
     const marginUsd = patch.marginUsd ?? phone.marginUsd ?? 0;
-    const updated: Phone = {
+    const phones = [...current.phones];
+    phones[idx] = {
       ...phone,
       ...patch,
       usd,
       marginUsd,
       priceArs: Math.round((usd + marginUsd) * current.dollarRate),
     };
-    const phones = [...current.phones];
-    phones[idx] = updated;
     const next: Catalog = { ...current, phones, updatedAt: new Date().toISOString() };
     await writeCatalog(next);
-    invalidateCatalogCache();
+    invalidateCache();
     return { ok: true, catalog: next };
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : "Error inesperado" };
