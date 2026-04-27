@@ -9,6 +9,7 @@ export function CartButton() {
     s.items.reduce((n, it) => n + it.qty, 0)
   );
   const [mounted, setMounted] = useState(false);
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => setMounted(true), []);
 
   return (
