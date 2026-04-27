@@ -1,7 +1,7 @@
 "use server";
 
 import { cookies } from "next/headers";
-import { revalidatePath, revalidateTag } from "next/cache";
+import { revalidatePath } from "next/cache";
 import { readCatalogFresh, writeCatalog } from "@/lib/catalog";
 import {
   buildPhone,
@@ -27,7 +27,6 @@ async function requireAuth() {
 }
 
 function invalidateCache() {
-  revalidateTag("catalog", "max");
   revalidatePath("/");
   revalidatePath("/producto/[slug]", "page");
 }

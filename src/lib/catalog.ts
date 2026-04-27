@@ -1,5 +1,4 @@
-import { head, put, list } from "@vercel/blob";
-import { unstable_cache } from "next/cache";
+import { put, list } from "@vercel/blob";
 import type { Catalog } from "./types";
 
 const BLOB_PATH = "catalog.json";
@@ -14,16 +13,14 @@ function hasBlobToken(): boolean {
   return Boolean(process.env.BLOB_READ_WRITE_TOKEN);
 }
 
-async function fetchFromBlob(): Promise<Catalog> {
+async function blobRead(): Promise<Catalog> {
   if (!hasBlobToken()) return EMPTY;
   try {
     const blobs = await list({ prefix: BLOB_PATH, limit: 1 });
     const entry = blobs.blobs.find((b) => b.pathname === BLOB_PATH);
     if (!entry) return EMPTY;
-    const meta = await head(entry.url);
-    const res = await fetch(meta.downloadUrl ?? entry.url, {
-      cache: "no-store",
-    });
+    // Fetch with no-store to always get the latest bytes from the origin
+    const res = await fetch(entry.url, { cache: "no-store" });
     if (!res.ok) return EMPTY;
     return (await res.json()) as Catalog;
   } catch (err) {
@@ -33,20 +30,19 @@ async function fetchFromBlob(): Promise<Catalog> {
 }
 
 /**
- * Cached read — used by ISR pages (revalidates every 60 s, tagged "catalog").
- * Do NOT use inside Server Actions — use readCatalogFresh() instead.
+ * Read the catalog.
+ * Pages declare `export const revalidate = 60` for ISR; on-demand revalidation
+ * is handled by revalidatePath() in Server Actions — no unstable_cache needed.
  */
-export const readCatalog = unstable_cache(fetchFromBlob, ["catalog-v1"], {
-  revalidate: 60,
-  tags: ["catalog"],
-});
+export async function readCatalog(): Promise<Catalog> {
+  return blobRead();
+}
 
 /**
- * Always-fresh read — bypasses unstable_cache entirely.
- * Use in every Server Action so stale cache doesn't cause false errors.
+ * Always-fresh read — use in Server Actions to avoid any per-request memoization.
  */
 export async function readCatalogFresh(): Promise<Catalog> {
-  return fetchFromBlob();
+  return blobRead();
 }
 
 export async function writeCatalog(catalog: Catalog): Promise<void> {

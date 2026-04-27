@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { revalidatePath, revalidateTag } from "next/cache";
+import { revalidatePath } from "next/cache";
 import { readCatalogFresh, writeCatalog } from "@/lib/catalog";
 
 export const dynamic = "force-dynamic";
@@ -70,7 +70,6 @@ export async function POST(req: Request) {
 
     // 4. Persist and invalidate caches
     await writeCatalog(next);
-    revalidateTag("catalog", "max");
     revalidatePath("/");
     revalidatePath("/producto/[slug]", "page");
 

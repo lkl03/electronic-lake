@@ -10,11 +10,9 @@ import {
   fetchDollarBlue,
   generateCatalog,
   logout,
-  testImageSearch,
   updatePhone,
   updatePricing,
 } from "./actions";
-import type { ImageSearchTestResult } from "./actions";
 
 type Feedback = { type: "success" | "error"; text: string; warnings?: string[]; at?: string };
 
@@ -92,11 +90,9 @@ function GenerateSection({
   );
   const [generateFeedback, setGenerateFeedback] = useState<Feedback | null>(null);
   const [pricingFeedback, setPricingFeedback] = useState<Feedback | null>(null);
-  const [imageSearchTest, setImageSearchTest] = useState<ImageSearchTestResult | null>(null);
   const [pendingGenerate, startGenerate] = useTransition();
   const [pendingPricing, startPricing] = useTransition();
   const [pendingDollar, startDollar] = useTransition();
-  const [pendingImageSearchTest, startImageSearchTest] = useTransition();
   const [localCatalog, setLocalCatalog] = useState<Catalog>(catalog);
 
   useEffect(() => {
@@ -220,53 +216,6 @@ function GenerateSection({
             <p className="mt-1.5 font-mono text-[10px] uppercase tracking-[0.22em] text-ink/40">
               ARS = (USD importador + ganancia) × dólar · redondeado
             </p>
-          </div>
-
-          {/* Serper image test */}
-          <div className="border border-ink/15 bg-paper-soft p-4">
-            <div className="flex flex-wrap items-center gap-4">
-              <div>
-                <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-ink/60">Imágenes · Serper</p>
-                <p className="mt-0.5 font-mono text-[9px] uppercase tracking-[0.18em] text-ink/35">Verificá que la API funcione antes de generar</p>
-              </div>
-              <button
-                type="button"
-                disabled={pendingImageSearchTest}
-                onClick={() => {
-                  setImageSearchTest(null);
-                  startImageSearchTest(async () => {
-                    const r = await testImageSearch();
-                    setImageSearchTest(r);
-                  });
-                }}
-                className="rounded-full border border-ink/30 px-4 py-2 font-mono text-[10px] uppercase tracking-[0.2em] text-ink/70 transition-colors hover:border-ink hover:text-ink disabled:opacity-50"
-              >
-                {pendingImageSearchTest ? "Probando…" : "Probar imágenes →"}
-              </button>
-            </div>
-            {imageSearchTest && (
-              <div className={`mt-3 border-l-2 px-4 py-3 font-mono text-[10px] ${imageSearchTest.ok ? "border-moss bg-moss/10 text-pine" : "border-red-500 bg-red-50 text-red-800"}`}>
-                {imageSearchTest.ok ? (
-                  <>
-                    <p className="font-semibold">✓ Serper OK — imagen encontrada para &ldquo;{imageSearchTest.query}&rdquo;</p>
-                    <p className="mt-1 break-all opacity-70">{imageSearchTest.imageUrl}</p>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={imageSearchTest.imageUrl} alt="test" className="mt-2 h-24 w-auto object-contain" />
-                  </>
-                ) : (
-                  <>
-                    <p className="font-semibold">✗ Error: {imageSearchTest.error}</p>
-                    {imageSearchTest.status && <p className="mt-1 opacity-70">HTTP {imageSearchTest.status}</p>}
-                    {imageSearchTest.detail && (
-                      <pre className="mt-2 whitespace-pre-wrap break-all text-[9px] opacity-60">{imageSearchTest.detail}</pre>
-                    )}
-                    <p className="mt-3 leading-relaxed opacity-80">
-                      Asegurate de que <code>SERPER_API_KEY</code> esté configurada en las variables de entorno de Vercel y que tu cuenta de serper.dev tenga créditos disponibles.
-                    </p>
-                  </>
-                )}
-              </div>
-            )}
           </div>
 
           <div className="flex flex-wrap items-center gap-4 border-t border-ink/15 pt-7">
